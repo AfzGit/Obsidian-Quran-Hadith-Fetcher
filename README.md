@@ -6,6 +6,8 @@ Quran and Hadith Fetcher is an Obsidian plugin that fetches Quran Ayaat and also
 
 It supports multiple languages, translations, and Ahadith books (depending on the provider).
 
+> Disclaimer: Please double check. Do not trust this plugin or the hadith providers for scholarly work.
+
 ## Usage
 
 Run these commands in the command palette (`Ctrl-p`)
@@ -109,6 +111,8 @@ Quran links use a selectable destination (Quran Unlocked, Quran.com, QuranWBW, o
 > Multiple spaces are converted into a single space automatically
 
 > Hadith-JSON has `\n` in its texts, this is also automatically replaced by a single space.
+
+> Warning: Text conversions may behave unexpectedly. You can always toggle them OFF in the settings.
 
 ## Development
 
