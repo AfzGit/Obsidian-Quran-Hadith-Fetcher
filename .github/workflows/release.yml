@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  push:
+    tags: ['*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run release:prepare
+      - name: Publish GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release/main.js release/manifest.json release/styles.css --title "Release $GITHUB_REF_NAME" --generate-notes

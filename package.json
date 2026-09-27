@@ -1,0 +1,22 @@
+{
+	"name": "quran-hadith-fetcher",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Fetch Quran and Hadith passages into the active Obsidian note from selectable online providers or installed offline databases. Choose translations, fetch single passages or ranges, insert source links and consistent formatting, and optionally standardize common Islamic text variants.",
+	"scripts": {
+		"build": "node build.mjs",
+		"check": "tsc --noEmit",
+		"test": "npm run clean:test && tsc -p tsconfig.test.json && node --test dist-test/tests/unit/*.test.js",
+		"test:unit": "npm run clean:test && tsc -p tsconfig.test.json && node --test dist-test/tests/unit/*.test.js",
+		"clean:test": "node -e \"require('fs').rmSync('dist-test',{recursive:true,force:true})\"",
+		"release:check": "node scripts/check-release.mjs",
+		"release:package": "node scripts/package-release.mjs",
+		"release:prepare": "npm run check && npm test && npm run build && npm run release:check && npm run release:package"
+	},
+	"devDependencies": {
+		"esbuild": "^0.25.0",
+		"obsidian": "1.13.1",
+		"typescript": "^5.8.3",
+		"@types/node": "^22.0.0"
+	}
+}

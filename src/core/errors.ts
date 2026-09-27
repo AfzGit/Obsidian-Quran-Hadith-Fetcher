@@ -1,0 +1,2 @@
+export class AppError extends Error { constructor(public readonly userMessage: string, public readonly kind: 'network'|'http'|'timeout'|'parse'|'validation'|'cancelled'|'unknown', public readonly status?: number, options?: ErrorOptions) { super(userMessage, options); this.name = 'AppError'; } }
+export function errorToNotice(error: unknown): string { return error instanceof AppError ? `ERROR: ${error.userMessage}` : `ERROR: ${error instanceof Error ? error.message : 'Unknown error.'}`; }
