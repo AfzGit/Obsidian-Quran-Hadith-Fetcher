@@ -37,14 +37,14 @@ function applyDefaultHadithGrading(result:HadithResult):HadithResult {
   return result;
 }
 
-function createNormalizers(settings: Settings) {
+function createNormalizers(pluginSettings: Settings) {
   const options = {
-    textConversionsEnabled: settings.textConversionsEnabled,
-    blessingNormalization: settings.blessingNormalization,
-    raNormalization: settings.raNormalization,
-    romanEnglish: settings.romanEnglish,
-    codeSyntaxMode: settings.formatting.codeSyntaxMode,
-    replacementRules: settings.replacementRules,
+    textConversionsEnabled: pluginSettings.textConversionsEnabled,
+    blessingNormalization: pluginSettings.blessingNormalization,
+    raNormalization: pluginSettings.raNormalization,
+    romanEnglish: pluginSettings.romanEnglish,
+    codeSyntaxMode: pluginSettings.formatting.codeSyntaxMode,
+    replacementRules: pluginSettings.replacementRules,
   } as const;
   const normalizeEnglish = (text: string) => transformFetchedEnglishText(text, options);
   const normalizeArabic = (text: string) => transformFetchedArabicText(text, options);
@@ -52,7 +52,7 @@ function createNormalizers(settings: Settings) {
 }
 
 export default class QuranHadithFetcherPlugin extends Plugin {
-  declare settings: Settings;
+  declare pluginSettings: Settings;
   private readonly registry = new ProviderRegistry();
   private readonly operations = new OperationManager();
   private readonly http = new ObsidianHttpClient();
@@ -62,16 +62,16 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   private settingsSaveQueue:Promise<void>=Promise.resolve();
 
   override async onload():Promise<void> {
-    this.settings = migrateSettings(await this.loadData());
+    this.pluginSettings = migrateSettings(await this.loadData());
     this.offlineStore = new ObsidianOfflineDatabaseStore(this.app, this.manifest.id);
     this.hadithJsonBookCache = new ObsidianPersistentJsonStore(this.app, this.manifest.id, 'cache/hadith-json');
-    this.registry.registerQuran(new QuranUnlockedProvider(this.http, () => this.settings.cacheEnabled));
-    this.registry.registerQuran(new AlQuranCloudProvider(this.http, () => this.settings.cacheEnabled));
-    this.registry.registerQuran(new QuranApiProvider(this.http, () => this.settings.cacheEnabled, this.offlineStore));
-    this.registry.registerQuran(new QuranProjectProvider(this.http, () => this.settings.cacheEnabled, this.offlineStore));
-    this.registry.registerHadith(new HadithUnlockedProvider(this.http, () => this.settings.cacheEnabled, this.offlineStore));
-    this.registry.registerHadith(new HadithApiProvider(this.http, () => this.settings.cacheEnabled, this.offlineStore));
-    this.registry.registerHadith(new HadithJsonProvider(this.http, () => this.settings.cacheEnabled, this.offlineStore, this.hadithJsonBookCache));
+    this.registry.registerQuran(new QuranUnlockedProvider(this.http, () => this.pluginSettings.cacheEnabled));
+    this.registry.registerQuran(new AlQuranCloudProvider(this.http, () => this.pluginSettings.cacheEnabled));
+    this.registry.registerQuran(new QuranApiProvider(this.http, () => this.pluginSettings.cacheEnabled, this.offlineStore));
+    this.registry.registerQuran(new QuranProjectProvider(this.http, () => this.pluginSettings.cacheEnabled, this.offlineStore));
+    this.registry.registerHadith(new HadithUnlockedProvider(this.http, () => this.pluginSettings.cacheEnabled, this.offlineStore));
+    this.registry.registerHadith(new HadithApiProvider(this.http, () => this.pluginSettings.cacheEnabled, this.offlineStore));
+    this.registry.registerHadith(new HadithJsonProvider(this.http, () => this.pluginSettings.cacheEnabled, this.offlineStore, this.hadithJsonBookCache));
     this.registerCommands();
     this.addSettingTab(new FetcherSettingTab(this.app, this, () => this.runHealthChecks()));
   }
@@ -79,8 +79,8 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   async saveSettings() {
     // Snapshot after normalization so each queued write represents the settings state
     // at the moment the caller changed it, rather than whichever state exists later.
-    this.settings = mangleFormatting(this.settings);
-    const snapshot = structuredClone(this.settings);
+    this.pluginSettings = mangleFormatting(this.pluginSettings);
+    const snapshot = structuredClone(this.pluginSettings);
     const write = this.settingsSaveQueue.then(() => this.saveData(snapshot));
     // Keep the queue usable after a failed write; the current call still receives the
     // original rejection so the UI can report it normally.
@@ -100,9 +100,9 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   getHadithProviderSummaries():{id:string;name:string;url:string;kind:'hadith'}[]{ return this.registry.listHadith().map(p=>({id:p.metadata.id,name:p.metadata.name,url:p.metadata.projectUrl,kind:'hadith'})); }
 
   openCommandPaletteSettings():void {
-    const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.settings.commandVisibility[command.id] !== false}));
+    const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.pluginSettings.commandVisibility[command.id] !== false}));
     new CommandVisibilityModal(this.app,items,async enabled=>{
-      this.settings.commandVisibility={...this.settings.commandVisibility,...enabled} as Settings['commandVisibility'];
+      this.pluginSettings.commandVisibility={...this.pluginSettings.commandVisibility,...enabled} as Settings['commandVisibility'];
       await this.saveSettings();
     }).open();
   }
@@ -123,8 +123,8 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   async removeOfflineDatabase(databaseId:string):Promise<void> { await this.offlineStore.remove(databaseId); }
 
   private async saveLastOptions(kind:'quran'|'hadith', options:OutputOptions):Promise<void> {
-    if (kind === 'quran') this.settings.lastQuranOptions = structuredClone(options);
-    else this.settings.lastHadithOptions = structuredClone(options);
+    if (kind === 'quran') this.pluginSettings.lastQuranOptions = structuredClone(options);
+    else this.pluginSettings.lastHadithOptions = structuredClone(options);
     await this.saveSettings();
   }
 
@@ -138,7 +138,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     return this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
   }
 
-  private isCommandVisible(id:CommandId):boolean { return this.settings.commandVisibility[id] !== false; }
+  private isCommandVisible(id:CommandId):boolean { return this.pluginSettings.commandVisibility[id] !== false; }
 
   // Command registration is data-driven from COMMAND_DEFINITIONS. Visibility is
   // checked in `checkCallback`, which means disabled commands disappear from normal
@@ -179,9 +179,9 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       case 'normalize-salutations': return this.normalizeSelectedText('salutation');
       case 'convert-ra': return this.normalizeSelectedText('ra');
       case 'toggle-text-conversions': {
-        this.settings.textConversionsEnabled=!this.settings.textConversionsEnabled;
+        this.pluginSettings.textConversionsEnabled=!this.pluginSettings.textConversionsEnabled;
         await this.saveSettings();
-        new Notice(this.settings.textConversionsEnabled ? 'Text conversions enabled.' : 'Text conversions disabled.');
+        new Notice(this.pluginSettings.textConversionsEnabled ? 'Text conversions enabled.' : 'Text conversions disabled.');
         return;
       }
     }
@@ -189,26 +189,26 @@ export default class QuranHadithFetcherPlugin extends Plugin {
 
   private async pickQuranProvider():Promise<void> {
     const providers=this.getQuranProviderSummaries();
-    new ChoiceModal(this.app,providers,p=>`${p.id===this.settings.quranProvider?'🚩 ':''}${p.name} — URL: ${p.url}`,async p=>{
-      this.settings.quranProvider=p.id;
-      if(p.id==='alquran-cloud'){this.settings.quranLanguage='en';this.settings.quranTranslation='en.hilali';}
-      else if(p.id==='quran-unlocked'){this.settings.quranLanguage='en';this.settings.quranTranslation='hilali-khan';}
-      else if(p.id==='quran-api'){this.settings.quranLanguage='en';this.settings.quranTranslation='eng-muhammadtaqiudd';}
-      else if(p.id==='quran-project'){this.settings.quranLanguage='en';this.settings.quranTranslation='en';}
+    new ChoiceModal(this.app,providers,p=>`${p.id===this.pluginSettings.quranProvider?'🚩 ':''}${p.name} — URL: ${p.url}`,async p=>{
+      this.pluginSettings.quranProvider=p.id;
+      if(p.id==='alquran-cloud'){this.pluginSettings.quranLanguage='en';this.pluginSettings.quranTranslation='en.hilali';}
+      else if(p.id==='quran-unlocked'){this.pluginSettings.quranLanguage='en';this.pluginSettings.quranTranslation='hilali-khan';}
+      else if(p.id==='quran-api'){this.pluginSettings.quranLanguage='en';this.pluginSettings.quranTranslation='eng-muhammadtaqiudd';}
+      else if(p.id==='quran-project'){this.pluginSettings.quranLanguage='en';this.pluginSettings.quranTranslation='en';}
       await this.saveSettings();
     },'Select Quran content provider').open();
   }
 
   private async pickQuranLanguage():Promise<void> {
     try {
-      const translations=await this.listQuranTranslations(this.settings.quranProvider);
+      const translations=await this.listQuranTranslations(this.pluginSettings.quranProvider);
       const groups=[...new Map(translations.map(t=>[t.language.toLowerCase(),t.language])).entries()]
         .sort((a,b)=>languageName(a[0]).localeCompare(languageName(b[0])));
       const items=groups.map(([id,name])=>({id,name}));
       new ChoiceModal(this.app,items,item=>languageName(item.id),async item=>{
-        this.settings.quranLanguage=item.id;
+        this.pluginSettings.quranLanguage=item.id;
         const match=translations.find(t=>t.language.toLowerCase()===item.id.toLowerCase());
-        if(match)this.settings.quranTranslation=match.id;
+        if(match)this.pluginSettings.quranTranslation=match.id;
         await this.saveSettings();
       },'Select Quran translation language').open();
     } catch(error) { new Notice(errorToNotice(error)); }
@@ -216,13 +216,13 @@ export default class QuranHadithFetcherPlugin extends Plugin {
 
   private async pickQuranTranslation():Promise<void> {
     try {
-      const translations=await this.listQuranTranslations(this.settings.quranProvider);
-      const language=this.settings.quranLanguage.toLowerCase();
+      const translations=await this.listQuranTranslations(this.pluginSettings.quranProvider);
+      const language=this.pluginSettings.quranLanguage.toLowerCase();
       const matches=translations.filter(t=>t.language.toLowerCase()===language);
       const items=(matches.length?matches:translations).map(t=>({translation:t,label:`${languageName(t.language)} — ${t.author ?? t.name}`}));
       new ChoiceModal(this.app,items,item=>item.label,async item=>{
-        this.settings.quranLanguage=item.translation.language;
-        this.settings.quranTranslation=item.translation.id;
+        this.pluginSettings.quranLanguage=item.translation.language;
+        this.pluginSettings.quranTranslation=item.translation.id;
         await this.saveSettings();
       },'Select Quran translation').open();
     } catch(error) { new Notice(errorToNotice(error)); }
@@ -232,28 +232,28 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     const items:Array<{id:Settings['quranWebsite'];label:string}>=Object.entries(QURAN_WEBSITES).map(([id,label])=>({id:id as Settings['quranWebsite'],label}));
     items.push({id:'custom',label:'Custom'});
     new ChoiceModal(this.app,items,item=>item.id==='custom' ? 'Custom' : item.label,async item=>{
-      if(item.id!=='custom'){this.settings.quranWebsite=item.id as Settings['quranWebsite'];await this.saveSettings();return;}
-      new InputModal(this.app,'Custom Quran URL','e.g. https://example.com/$surah/$ayah',this.settings.customQuranUrl,async value=>{this.settings.quranWebsite='custom';this.settings.customQuranUrl=value;await this.saveSettings();},()=>{},value=>{const invalid=validateTemplate(value);return value.includes('$surah') ? (invalid.length ? `Unknown URL placeholder(s): ${invalid.join(', ')}` : null) : 'URL template must contain $surah.';},'text').open();
+      if(item.id!=='custom'){this.pluginSettings.quranWebsite=item.id as Settings['quranWebsite'];await this.saveSettings();return;}
+      new InputModal(this.app,'Custom Quran URL','e.g. https://example.com/$surah/$ayah',this.pluginSettings.customQuranUrl,async value=>{this.pluginSettings.quranWebsite='custom';this.pluginSettings.customQuranUrl=value;await this.saveSettings();},()=>{},value=>{const invalid=validateTemplate(value);return value.includes('$surah') ? (invalid.length ? `Unknown URL placeholder(s): ${invalid.join(', ')}` : null) : 'URL template must contain $surah.';},'text').open();
     },'Select Quran website').open();
   }
 
   private async pickHadithProvider():Promise<void> {
     const providers=this.getHadithProviderSummaries();
-    new ChoiceModal(this.app,providers,p=>`${p.id===this.settings.hadithProvider?'🚩 ':''}${p.name} — URL: ${p.url}`,async p=>{
-      this.settings.hadithProvider=p.id;
-      this.settings.hadithLanguage='en';
-      this.settings.hadithTranslation=p.id==='hadith-api' ? 'eng' : 'en';
+    new ChoiceModal(this.app,providers,p=>`${p.id===this.pluginSettings.hadithProvider?'🚩 ':''}${p.name} — URL: ${p.url}`,async p=>{
+      this.pluginSettings.hadithProvider=p.id;
+      this.pluginSettings.hadithLanguage='en';
+      this.pluginSettings.hadithTranslation=p.id==='hadith-api' ? 'eng' : 'en';
       await this.saveSettings();
     },'Select Hadith content provider').open();
   }
 
   private async pickHadithTranslation():Promise<void> {
     try {
-      const translations=await this.listHadithTranslations(this.settings.hadithProvider);
+      const translations=await this.listHadithTranslations(this.pluginSettings.hadithProvider);
       const items=translations.map(t=>({translation:t,label:`${languageName(t.language)} — ${t.name}`}));
       new ChoiceModal(this.app,items,item=>item.label,async item=>{
-        this.settings.hadithLanguage=item.translation.language;
-        this.settings.hadithTranslation=item.translation.id;
+        this.pluginSettings.hadithLanguage=item.translation.language;
+        this.pluginSettings.hadithTranslation=item.translation.id;
         await this.saveSettings();
       },'Select Hadith translation').open();
     } catch(error) { new Notice(errorToNotice(error)); }
@@ -303,7 +303,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   private async insertQuran(editor:Editor):Promise<void> {
     const operation = this.operations.begin();
     const selectedRef = parseQuranReference(editor.getSelection());
-    if (selectedRef && validateQuranReference(selectedRef, this.settings.quranFetchLimit) === null) {
+    if (selectedRef && validateQuranReference(selectedRef, this.pluginSettings.quranFetchLimit) === null) {
       await this.chooseQuranOptions(editor, selectedRef, operation.id, operation.signal);
       return;
     }
@@ -320,7 +320,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         const normalized = value.replace(/\s*[-–—]\s*/u, '-');
         const ref = parseQuranReference(`${surah}:${normalized}`);
         if (!ref) return;
-        const error = validateQuranReference(ref, this.settings.quranFetchLimit);
+        const error = validateQuranReference(ref, this.pluginSettings.quranFetchLimit);
         if (error) return;
         await this.chooseQuranOptions(editor, ref, id, signal);
       },
@@ -329,12 +329,12 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         const normalized = value.replace(/\s*[-–—]\s*/u, '-');
         if (!/^\d{1,3}(?:-\d{1,3})?$/.test(normalized)) return 'Enter an ayah number or range, e.g. 1 or 1 - 10.';
         const ref=parseQuranReference(`${surah}:${normalized}`);
-        return ref ? validateQuranReference(ref, this.settings.quranFetchLimit) : 'Invalid Ayah/range.';
+        return ref ? validateQuranReference(ref, this.pluginSettings.quranFetchLimit) : 'Invalid Ayah/range.';
       },
     ).open();
   }
 
-  private async chooseQuranOptions(editor:Editor, ref:Exclude<ReturnType<typeof parseQuranReference>,null>, id:number, signal:AbortSignal, initialOptions:OutputOptions=this.settings.lastQuranOptions) {
+  private async chooseQuranOptions(editor:Editor, ref:Exclude<ReturnType<typeof parseQuranReference>,null>, id:number, signal:AbortSignal, initialOptions:OutputOptions=this.pluginSettings.lastQuranOptions) {
     new OptionsModal(
       this.app,
       initialOptions,
@@ -352,15 +352,15 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     ref:Exclude<ReturnType<typeof parseQuranReference>,null>,
     id:number,
     signal:AbortSignal,
-    opts:OutputOptions = this.settings.lastQuranOptions,
+    opts:OutputOptions = this.pluginSettings.lastQuranOptions,
   ) {
     try {
-      const provider = this.registry.getQuran(this.settings.quranProvider);
-      const rangeError=validateQuranReference(ref,this.settings.quranFetchLimit);
+      const provider = this.registry.getQuran(this.pluginSettings.quranProvider);
+      const rangeError=validateQuranReference(ref,this.pluginSettings.quranFetchLimit);
       if(rangeError) throw new AppError(rangeError,'validation');
       const translations = await provider.listTranslations({signal});
-      const translation = translations.find(t => t.id === this.settings.quranTranslation && t.language.toLowerCase() === this.settings.quranLanguage.toLowerCase())
-        ?? translations.find(t => t.id === this.settings.quranTranslation)
+      const translation = translations.find(t => t.id === this.pluginSettings.quranTranslation && t.language.toLowerCase() === this.pluginSettings.quranLanguage.toLowerCase())
+        ?? translations.find(t => t.id === this.pluginSettings.quranTranslation)
         ?? translations.find(t => t.id === 'hilali-khan')
         ?? translations.find(t => t.id === 'en.hilali')
         ?? translations.find(t => t.language.toLowerCase() === 'en')
@@ -372,15 +372,15 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       if (!this.operations.isCurrent(id)) return;
 
       const transformed:QuranResult = structuredClone(result);
-      const { normalizeEnglish } = createNormalizers(this.settings);
-      if (this.settings.romanEnglish) transformed.surahName = normalizeEnglish(transformed.surahName);
+      const { normalizeEnglish } = createNormalizers(this.pluginSettings);
+      if (this.pluginSettings.romanEnglish) transformed.surahName = normalizeEnglish(transformed.surahName);
       for (const ayah of transformed.ayahs) {
         if (ayah.translation) ayah.translation.text = normalizeEnglish(ayah.translation.text);
         if (ayah.footnotes) for (const footnote of ayah.footnotes) footnote.text = normalizeEnglish(footnote.text);
       }
-      transformed.source.sourceUrl = makeQuranUrl(this.settings.quranWebsite, this.settings.customQuranUrl, ref.surah, ref.startAyah, ref.endAyah, translation.id);
+      transformed.source.sourceUrl = makeQuranUrl(this.pluginSettings.quranWebsite, this.pluginSettings.customQuranUrl, ref.surah, ref.startAyah, ref.endAyah, translation.id);
       transformed.source.providerId = provider.metadata.id;
-      const markdown = formatQuran(transformed, {...this.settings.formatting, showLink:opts.link}, opts);
+      const markdown = formatQuran(transformed, {...this.pluginSettings.formatting, showLink:opts.link}, opts);
       new PreviewModal(
         this.app,
         markdown,
@@ -402,16 +402,16 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     const operation = this.operations.begin();
     const selectedRef = parseHadithReference(editor.getSelection());
     if (selectedRef) {
-      const provider=this.registry.getHadith(this.settings.hadithProvider);
+      const provider=this.registry.getHadith(this.pluginSettings.hadithProvider);
       try {
         const collections=await provider.listCollections({signal:operation.signal});
-        const error=validateHadithReference(selectedRef,collections,this.settings.hadithFetchLimit);
+        const error=validateHadithReference(selectedRef,collections,this.pluginSettings.hadithFetchLimit);
         if(error){new Notice(`ERROR: ${error}`);return;}
       } catch(error) { new Notice(errorToNotice(error)); return; }
       await this.chooseHadithOptions(editor, selectedRef, operation.id, operation.signal);
       return;
     }
-    const provider = this.registry.getHadith(this.settings.hadithProvider);
+    const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
     let collections;
     try { collections = await provider.listCollections({signal:operation.signal}); }
     catch (error) { new Notice(errorToNotice(error)); return; }
@@ -432,7 +432,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         const normalized=value.replace(/\s*[-–—]\s*/u,'-');
         if(!/^\d{1,6}(?:-\d{1,6})?$/.test(normalized)) return 'Enter a Hadith number or range, e.g. 1 or 1-5.';
         const ref=parseHadithReference(`${collection.id}:${normalized}`);
-        return ref ? validateHadithReference(ref,collections,this.settings.hadithFetchLimit) : 'Invalid Hadith/range.';
+        return ref ? validateHadithReference(ref,collections,this.pluginSettings.hadithFetchLimit) : 'Invalid Hadith/range.';
       }).open();
     }, offlineCollectionIds).open();
   }
@@ -452,14 +452,14 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     return ids;
   }
 
-  private async chooseHadithOptions(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, knownCollections?:CollectionDefinition[], initialOptions:OutputOptions=this.settings.lastHadithOptions) {
-    const provider = this.registry.getHadith(this.settings.hadithProvider);
+  private async chooseHadithOptions(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, knownCollections?:CollectionDefinition[], initialOptions:OutputOptions=this.pluginSettings.lastHadithOptions) {
+    const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
     let collections = knownCollections;
     if (!collections) {
       try { collections = await provider.listCollections({signal}); }
       catch (error) { new Notice(errorToNotice(error)); return; }
     }
-    const error = validateHadithReference(ref, collections, this.settings.hadithFetchLimit);
+    const error = validateHadithReference(ref, collections, this.pluginSettings.hadithFetchLimit);
     if (error) { new Notice(`ERROR: ${error}`); return; }
     new OptionsModal(
       this.app,
@@ -477,17 +477,17 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     ).open();
   }
 
-  private async fetchAndInsertHadith(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, opts:OutputOptions = this.settings.lastHadithOptions, collections?:CollectionDefinition[]) {
+  private async fetchAndInsertHadith(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, opts:OutputOptions = this.pluginSettings.lastHadithOptions, collections?:CollectionDefinition[]) {
     try {
-      const provider = this.registry.getHadith(this.settings.hadithProvider);
+      const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
       const translations = await provider.listTranslations({signal});
-      const translation = translations.find(t => t.id === this.settings.hadithTranslation && t.language.toLowerCase() === this.settings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === this.settings.hadithTranslation) ?? translations.find(t => t.language.toLowerCase() === this.settings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === 'eng') ?? translations[0];
+      const translation = translations.find(t => t.id === this.pluginSettings.hadithTranslation && t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === this.pluginSettings.hadithTranslation) ?? translations.find(t => t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === 'eng') ?? translations[0];
       if(!translation) throw new AppError('No Hadith translation is configured for this provider.','validation');
       const end=ref.endHadithNumber ?? ref.hadithNumber;
-      if(end - ref.hadithNumber + 1 > this.settings.hadithFetchLimit) throw new AppError(`Hadith fetch limit is ${this.settings.hadithFetchLimit} hadiths.`,'validation');
+      if(end - ref.hadithNumber + 1 > this.pluginSettings.hadithFetchLimit) throw new AppError(`Hadith fetch limit is ${this.pluginSettings.hadithFetchLimit} hadiths.`,'validation');
       const results = await provider.fetchHadithRange(ref, translation, {signal});
       if (!this.operations.isCurrent(id)) return;
-      const { normalizeArabic, normalizeEnglish } = createNormalizers(this.settings);
+      const { normalizeArabic, normalizeEnglish } = createNormalizers(this.pluginSettings);
       const transformed:HadithResult[]=results.map(result=>{
         const gradedResult=applyDefaultHadithGrading(result);
         const item:HadithResult=structuredClone(gradedResult);
@@ -499,8 +499,8 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         return item;
       });
       const markdown=transformed.length===1
-        ? formatHadith(transformed[0]!, {...this.settings.formatting,showLink:opts.link}, opts)
-        : formatHadithRange(transformed, {...this.settings.formatting,showLink:opts.link}, opts);
+        ? formatHadith(transformed[0]!, {...this.pluginSettings.formatting,showLink:opts.link}, opts)
+        : formatHadithRange(transformed, {...this.pluginSettings.formatting,showLink:opts.link}, opts);
       new PreviewModal(
         this.app,
         markdown,
@@ -514,4 +514,4 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   }
 }
 
-function mangleFormatting(settings:Settings):Settings { return {...settings, formatting:{...DEFAULT_FORMATTING,...settings.formatting}}; }
+function mangleFormatting(pluginSettings:Settings):Settings { return {...pluginSettings, formatting:{...DEFAULT_FORMATTING,...pluginSettings.formatting}}; }

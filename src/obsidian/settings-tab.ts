@@ -21,7 +21,7 @@ export class FetcherSettingTab extends PluginSettingTab {
   constructor(
     app:App,
     private readonly plugin:Plugin & {
-      settings:Settings;
+      pluginSettings:Settings;
       saveSettings():Promise<void>;
       listQuranTranslations(providerId:string, signal?:AbortSignal):Promise<TranslationDefinition[]>;
       listHadithTranslations(providerId:string, signal?:AbortSignal):Promise<TranslationDefinition[]>;
@@ -45,7 +45,7 @@ export class FetcherSettingTab extends PluginSettingTab {
     const token=++this.displayToken;
     const {containerEl}=this;
     containerEl.empty();
-    containerEl.createEl('h2',{text:'Quran & Hadith Fetcher'});
+    new Setting(containerEl).setName('Quran & Hadith Fetcher').setHeading();
     this.renderSectionHeading(containerEl,'Provider Settings for Quran & Hadith','');
     this.renderProvidersSection(containerEl,token);
 
@@ -75,49 +75,49 @@ export class FetcherSettingTab extends PluginSettingTab {
 
   private renderSectionHeading(containerEl:HTMLElement,text:string,description:string):void {
     const heading=containerEl.createDiv({cls:'qhf-settings-section-heading'});
-    heading.createEl('h3',{text});
+    new Setting(heading).setName(text).setHeading();
     if(description) heading.createEl('div',{text:description,cls:'qhf-settings-section-description'});
   }
 
   private renderProvidersSection(containerEl:HTMLElement,token:number):void {
     new Setting(containerEl)
       .setName('Quran content provider')
-      .setDesc("Choose the online project used to retrieve Quran Arabic text and translations. The provider project URL is shown for reference. URL: " + (this.plugin.getQuranProviderSummaries().find(p=>p.id===this.plugin.settings.quranProvider)?.url ?? 'Unknown'))
+      .setDesc("Choose the online project used to retrieve Quran Arabic text and translations. The provider project URL is shown for reference. URL: " + (this.plugin.getQuranProviderSummaries().find(p=>p.id===this.plugin.pluginSettings.quranProvider)?.url ?? 'Unknown'))
       .addDropdown(d=>d
         .addOptions(QURAN_PROVIDERS)
-        .setValue(this.plugin.settings.quranProvider)
+        .setValue(this.plugin.pluginSettings.quranProvider)
         .onChange(async v=>{
-          this.plugin.settings.quranProvider=v;
-          if(v==='alquran-cloud'){ this.plugin.settings.quranLanguage='en'; this.plugin.settings.quranTranslation='en.hilali'; }
-          else if(v==='quran-unlocked'){ this.plugin.settings.quranLanguage='en'; this.plugin.settings.quranTranslation='hilali-khan'; }
-          else if(v==='quran-api'){ this.plugin.settings.quranLanguage='en'; this.plugin.settings.quranTranslation='eng-muhammadtaqiudd'; }
-          else if(v==='quran-project'){ this.plugin.settings.quranLanguage='en'; this.plugin.settings.quranTranslation='en'; }
+          this.plugin.pluginSettings.quranProvider=v;
+          if(v==='alquran-cloud'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='en.hilali'; }
+          else if(v==='quran-unlocked'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='hilali-khan'; }
+          else if(v==='quran-api'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='eng-muhammadtaqiudd'; }
+          else if(v==='quran-project'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='en'; }
           await this.plugin.saveSettings();
           this.display();
         }));
-    void this.renderQuranTranslationSelectors(containerEl,this.plugin.settings.quranProvider,token);
+    void this.renderQuranTranslationSelectors(containerEl,this.plugin.pluginSettings.quranProvider,token);
 
     new Setting(containerEl)
       .setName('Quran link website')
       .addDropdown(d=>d
         .addOptions({...QURAN_WEBSITES,custom:'Custom'})
-        .setValue(this.plugin.settings.quranWebsite)
+        .setValue(this.plugin.pluginSettings.quranWebsite)
         .onChange(async v=>{
-          this.plugin.settings.quranWebsite=v as Settings['quranWebsite'];
+          this.plugin.pluginSettings.quranWebsite=v as Settings['quranWebsite'];
           await this.plugin.saveSettings();
           this.display();
         }));
 
-    if(this.plugin.settings.quranWebsite==='custom'){
+    if(this.plugin.pluginSettings.quranWebsite==='custom'){
       new Setting(containerEl)
         .setName('Custom Quran link template')
         .setDesc('Use $surah, $ayah, and $ayahlast in the URL template.')
         .addTextArea(t=>{
-          t.setValue(this.plugin.settings.customQuranUrl);
+          t.setValue(this.plugin.pluginSettings.customQuranUrl);
           t.inputEl.rows=4;
           t.inputEl.addClass('qhf-url-template');
           t.onChange(async v=>{
-            this.plugin.settings.customQuranUrl=v;
+            this.plugin.pluginSettings.customQuranUrl=v;
             const bad=validateTemplate(v);
             t.inputEl.toggleClass('qhf-invalid',bad.length>0);
             if(!bad.length) await this.plugin.saveSettings();
@@ -127,33 +127,33 @@ export class FetcherSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Hadith content provider')
-      .setDesc('Choose the online project used to retrieve Hadith text, translations, and grading where supported. The provider project URL is shown for reference. URL: ' + (this.plugin.getHadithProviderSummaries().find(p=>p.id===this.plugin.settings.hadithProvider)?.url ?? 'Unknown'))
+      .setDesc('Choose the online project used to retrieve Hadith text, translations, and grading where supported. The provider project URL is shown for reference. URL: ' + (this.plugin.getHadithProviderSummaries().find(p=>p.id===this.plugin.pluginSettings.hadithProvider)?.url ?? 'Unknown'))
       .addDropdown(d=>d
         .addOptions(HADITH_PROVIDERS)
-        .setValue(this.plugin.settings.hadithProvider)
+        .setValue(this.plugin.pluginSettings.hadithProvider)
         .onChange(async v=>{
-          this.plugin.settings.hadithProvider=v;
+          this.plugin.pluginSettings.hadithProvider=v;
           // Provider switches should always land on a valid English default.
           if(v==='hadith-api'){
-            this.plugin.settings.hadithLanguage='en';
-            this.plugin.settings.hadithTranslation='eng';
+            this.plugin.pluginSettings.hadithLanguage='en';
+            this.plugin.pluginSettings.hadithTranslation='eng';
           } else if(v==='hadith-unlocked'){
-            this.plugin.settings.hadithLanguage='en';
-            this.plugin.settings.hadithTranslation='en';
+            this.plugin.pluginSettings.hadithLanguage='en';
+            this.plugin.pluginSettings.hadithTranslation='en';
           } else if(v==='hadith-json'){
-            this.plugin.settings.hadithLanguage='en';
-            this.plugin.settings.hadithTranslation='en';
+            this.plugin.pluginSettings.hadithLanguage='en';
+            this.plugin.pluginSettings.hadithTranslation='en';
           }
           await this.plugin.saveSettings();
           this.display();
         }));
-    void this.renderHadithTranslationSelector(containerEl,this.plugin.settings.hadithProvider,token);
+    void this.renderHadithTranslationSelector(containerEl,this.plugin.pluginSettings.hadithProvider,token);
 
     new Setting(containerEl)
       .setName('Cache fetched content')
       .setDesc('Reuse previously fetched content before making a network request.')
-      .addToggle(t=>t.setValue(this.plugin.settings.cacheEnabled).onChange(async v=>{
-        this.plugin.settings.cacheEnabled=v;
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.cacheEnabled).onChange(async v=>{
+        this.plugin.pluginSettings.cacheEnabled=v;
         await this.plugin.saveSettings();
       }));
 
@@ -198,9 +198,9 @@ export class FetcherSettingTab extends PluginSettingTab {
       .setName('Command palette commands')
       .setDesc('Choose which plugin commands appear in Obsidian’s command palette.')
       .addButton(b=>b.setButtonText('Configure').onClick(()=>{
-        const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.plugin.settings.commandVisibility[command.id] !== false}));
+        const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.plugin.pluginSettings.commandVisibility[command.id] !== false}));
         new CommandVisibilityModal(this.app,items,async enabled=>{
-          this.plugin.settings.commandVisibility={...this.plugin.settings.commandVisibility,...enabled} as Settings['commandVisibility'];
+          this.plugin.pluginSettings.commandVisibility={...this.plugin.pluginSettings.commandVisibility,...enabled} as Settings['commandVisibility'];
           await this.plugin.saveSettings();
         }).open();
       }));
@@ -211,7 +211,7 @@ export class FetcherSettingTab extends PluginSettingTab {
       .setName(name)
       .setDesc(description)
       .addText(t=>{
-        t.setValue(String(this.plugin.settings[key]));
+        t.setValue(String(this.plugin.pluginSettings[key]));
         t.inputEl.type='number';
         t.inputEl.min='1';
         t.inputEl.max='1000';
@@ -221,7 +221,7 @@ export class FetcherSettingTab extends PluginSettingTab {
           const valid=Number.isInteger(number) && number>=1 && number<=1000;
           t.inputEl.toggleClass('qhf-invalid',!valid);
           if(valid){
-            this.plugin.settings[key]=number;
+            this.plugin.pluginSettings[key]=number;
             await this.plugin.saveSettings();
           }
         });
@@ -246,8 +246,8 @@ export class FetcherSettingTab extends PluginSettingTab {
       if(token!==this.displayToken)return;
       const groups=[...new Map(translations.map(t=>[t.language.toLowerCase(),t.language])).entries()]
         .sort((a,b)=>languageName(a[0]).localeCompare(languageName(b[0])));
-      const storedLang=this.plugin.settings.quranLanguage.toLowerCase();
-      const storedTranslation=this.plugin.settings.quranTranslation;
+      const storedLang=this.plugin.pluginSettings.quranLanguage.toLowerCase();
+      const storedTranslation=this.plugin.pluginSettings.quranTranslation;
       const selectedTranslation=translations.find(t=>t.id===storedTranslation);
       const initial=groups.find(([code])=>code===storedLang)?.[0]
         ?? selectedTranslation?.language.toLowerCase()
@@ -271,8 +271,8 @@ export class FetcherSettingTab extends PluginSettingTab {
           ?? matches[0];
         if(!chosen)return;
         translationSelect.value=chosen.id;
-        this.plugin.settings.quranLanguage=chosen.language;
-        this.plugin.settings.quranTranslation=chosen.id;
+        this.plugin.pluginSettings.quranLanguage=chosen.language;
+        this.plugin.pluginSettings.quranTranslation=chosen.id;
       };
 
       renderTranslations(languageSelect.value,storedTranslation);
@@ -283,8 +283,8 @@ export class FetcherSettingTab extends PluginSettingTab {
       translationSelect.onchange=async()=>{
         const chosen=translations.find(t=>t.id===translationSelect.value);
         if(!chosen)return;
-        this.plugin.settings.quranLanguage=chosen.language;
-        this.plugin.settings.quranTranslation=chosen.id;
+        this.plugin.pluginSettings.quranLanguage=chosen.language;
+        this.plugin.pluginSettings.quranTranslation=chosen.id;
         await this.plugin.saveSettings();
       };
     } catch {
@@ -301,8 +301,8 @@ export class FetcherSettingTab extends PluginSettingTab {
     try{
       const translations=await this.getTranslations('hadith',providerId);
       if(token!==this.displayToken)return;
-      const currentId=this.plugin.settings.hadithTranslation;
-      const currentLang=this.plugin.settings.hadithLanguage.toLowerCase();
+      const currentId=this.plugin.pluginSettings.hadithTranslation;
+      const currentLang=this.plugin.pluginSettings.hadithLanguage.toLowerCase();
       const english=translations.find(t=>t.language.toLowerCase()==='en');
       const chosen=translations.find(t=>t.id===currentId && t.language.toLowerCase()===currentLang)
         ?? translations.find(t=>t.id===currentId)
@@ -317,15 +317,15 @@ export class FetcherSettingTab extends PluginSettingTab {
       const options=translations.map(t=>({value:`${t.language.toLowerCase()}\u0000${t.id}`,label:optionLabel(t)}));
       select.replaceChildren(...options.map(o=>new Option(o.label,o.value)));
       select.value=`${chosen.language.toLowerCase()}\u0000${chosen.id}`;
-      this.plugin.settings.hadithLanguage=chosen.language;
-      this.plugin.settings.hadithTranslation=chosen.id;
+      this.plugin.pluginSettings.hadithLanguage=chosen.language;
+      this.plugin.pluginSettings.hadithTranslation=chosen.id;
 
       select.onchange=async()=>{
         const [language,id]=select.value.split('\u0000');
         const item=translations.find(t=>t.id===id && t.language.toLowerCase()===language);
         if(!item)return;
-        this.plugin.settings.hadithLanguage=item.language;
-        this.plugin.settings.hadithTranslation=item.id;
+        this.plugin.pluginSettings.hadithLanguage=item.language;
+        this.plugin.pluginSettings.hadithTranslation=item.id;
         await this.plugin.saveSettings();
       };
     } catch {
@@ -347,8 +347,8 @@ export class FetcherSettingTab extends PluginSettingTab {
 
   private renderFormattingSection(containerEl:HTMLElement):void {
     new Setting(containerEl).setName('Use Arabic-Indic ayah numbers').setDesc('Show Quran ayah numbers with Arabic-Indic digits (١، ٢، ٣) instead of Western digits (1, 2, 3) in inserted output.')
-      .addToggle(t=>t.setValue(this.plugin.settings.formatting.arabicAyahNumbers).onChange(async v=>{
-        this.plugin.settings.formatting.arabicAyahNumbers=v;
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.formatting.arabicAyahNumbers).onChange(async v=>{
+        this.plugin.pluginSettings.formatting.arabicAyahNumbers=v;
         await this.plugin.saveSettings();
       }));
 
@@ -369,22 +369,22 @@ export class FetcherSettingTab extends PluginSettingTab {
           remove:'Remove `',
           none:'Do not modify',
         })
-        .setValue(this.plugin.settings.formatting.codeSyntaxMode)
+        .setValue(this.plugin.pluginSettings.formatting.codeSyntaxMode)
         .onChange(async v=>{
-          this.plugin.settings.formatting.codeSyntaxMode=v as Settings['formatting']['codeSyntaxMode'];
+          this.plugin.pluginSettings.formatting.codeSyntaxMode=v as Settings['formatting']['codeSyntaxMode'];
           await this.plugin.saveSettings();
         }));
 
     new Setting(containerEl).setName('Callout style').setDesc('Choose the Obsidian callout used to wrap fetched Quran or Hadith content. Select None for plain Markdown without a callout.').addDropdown(d=>d.addOptions({
       none:'None',quote:'Quote',note:'Note',abstract:'Abstract',info:'Info',todo:'Todo',tip:'Tip',success:'Success',question:'Question',warning:'Warning',failure:'Failure',danger:'Danger',bug:'Bug',example:'Example',cite:'Cite',custom:'Custom'
-    }).setValue(this.plugin.settings.formatting.callout).onChange(async v=>{
-      this.plugin.settings.formatting.callout=v as Settings['formatting']['callout'];
+    }).setValue(this.plugin.pluginSettings.formatting.callout).onChange(async v=>{
+      this.plugin.pluginSettings.formatting.callout=v as Settings['formatting']['callout'];
       await this.plugin.saveSettings();
       this.display();
     }));
-    if(this.plugin.settings.formatting.callout==='custom'){
-      new Setting(containerEl).setName('Custom callout type').setDesc('Enter the Obsidian callout type used when Callout style is Custom. Enter the type only, without the [!] marker; for example, my-callout.').addText(t=>t.setValue(this.plugin.settings.formatting.customCalloutType).onChange(async v=>{
-        this.plugin.settings.formatting.customCalloutType=v.trim();
+    if(this.plugin.pluginSettings.formatting.callout==='custom'){
+      new Setting(containerEl).setName('Custom callout type').setDesc('Enter the Obsidian callout type used when Callout style is Custom. Enter the type only, without the [!] marker; for example, my-callout.').addText(t=>t.setValue(this.plugin.pluginSettings.formatting.customCalloutType).onChange(async v=>{
+        this.plugin.pluginSettings.formatting.customCalloutType=v.trim();
         await this.plugin.saveSettings();
       }));
     }
@@ -405,23 +405,23 @@ export class FetcherSettingTab extends PluginSettingTab {
       .addOptions({...Object.fromEntries(Object.entries(presets).map(([k,[open,close]])=>[k,`${open}${close}`])),custom:'Custom'})
       .setValue(current)
       .onChange(async v=>{
-        (this.plugin.settings.formatting as unknown as Record<string,unknown>)[styleKey]=v;
+        (this.plugin.pluginSettings.formatting as unknown as Record<string,unknown>)[styleKey]=v;
         if(v!=='custom'){
           const [open,close]=presets[v]!;
-          (this.plugin.settings.formatting as unknown as Record<string,unknown>)[openKey]=open;
-          (this.plugin.settings.formatting as unknown as Record<string,unknown>)[closeKey]=close;
+          (this.plugin.pluginSettings.formatting as unknown as Record<string,unknown>)[openKey]=open;
+          (this.plugin.pluginSettings.formatting as unknown as Record<string,unknown>)[closeKey]=close;
         }
         await this.plugin.saveSettings();
         this.display();
       }));
 
     if(current==='custom'){
-      new Setting(containerEl).setName(`${name} opening`).setDesc('Character placed before the formatted value.').addText(t=>t.setValue(this.plugin.settings.formatting[openKey]).onChange(async v=>{
-        this.plugin.settings.formatting[openKey]=v;
+      new Setting(containerEl).setName(`${name} opening`).setDesc('Character placed before the formatted value.').addText(t=>t.setValue(this.plugin.pluginSettings.formatting[openKey]).onChange(async v=>{
+        this.plugin.pluginSettings.formatting[openKey]=v;
         await this.plugin.saveSettings();
       }));
-      new Setting(containerEl).setName(`${name} closing`).setDesc('Character placed after the formatted value.').addText(t=>t.setValue(this.plugin.settings.formatting[closeKey]).onChange(async v=>{
-        this.plugin.settings.formatting[closeKey]=v;
+      new Setting(containerEl).setName(`${name} closing`).setDesc('Character placed after the formatted value.').addText(t=>t.setValue(this.plugin.pluginSettings.formatting[closeKey]).onChange(async v=>{
+        this.plugin.pluginSettings.formatting[closeKey]=v;
         await this.plugin.saveSettings();
       }));
     }
@@ -517,7 +517,7 @@ export class FetcherSettingTab extends PluginSettingTab {
   }
 
   private renderTextConversionSection(containerEl:HTMLElement):void {
-    const conversionsEnabled=this.plugin.settings.textConversionsEnabled === true;
+    const conversionsEnabled=this.plugin.pluginSettings.textConversionsEnabled === true;
     let controls!:HTMLDivElement;
 
     new Setting(containerEl)
@@ -528,7 +528,7 @@ export class FetcherSettingTab extends PluginSettingTab {
         await this.preserveSettingsScroll(async()=>{
           // IMPORTANT: this is intentionally NOT inverted. ON means enabled; OFF means disabled.
           // Keep this mapping identical to Settings.textConversionsEnabled and createNormalizers().
-          this.plugin.settings.textConversionsEnabled=enabled;
+          this.plugin.pluginSettings.textConversionsEnabled=enabled;
           controls.toggleClass('qhf-text-conversions-disabled',!enabled);
           controls.setAttribute('aria-disabled',String(!enabled));
           await this.plugin.saveSettings();
@@ -540,8 +540,8 @@ export class FetcherSettingTab extends PluginSettingTab {
     const blessingSetting=new Setting(controls)
       .setName('Normalize salutations to ﷺ')
       .setDesc('Convert common salutation variants to ﷺ. Examples: SAW, S.A.W., S.A.W.S., and P.B.U.H. → (ﷺ); (O Muhammad SAW) → (O Muhammad ﷺ); may peace and blessings be upon him → ﷺ; Prophet, may Allah bless him and grant him peace → Prophet ﷺ; صلى الله عليه وسلم → ﷺ. Existing ﷺ and source parentheses are preserved.')
-      .addToggle(t=>t.setValue(this.plugin.settings.blessingNormalization).onChange(async v=>{
-        this.plugin.settings.blessingNormalization=v;
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.blessingNormalization).onChange(async v=>{
+        this.plugin.pluginSettings.blessingNormalization=v;
         await this.plugin.saveSettings();
       }));
     blessingSetting.settingEl.addClass('qhf-setting-ltr');
@@ -549,19 +549,19 @@ export class FetcherSettingTab extends PluginSettingTab {
     new Setting(controls)
       .setName('Convert Variants of RA used for the Sahaba to رَضِيَ اللهُ عَنْهُ')
       .setDesc('Convert English and abbreviated variants of the Sahaba honorific to Arabic. Examples: RA, R.A., R.A. → رضي اللّه عنه; (May Allah be pleased with Him) → (رضي اللّه عنه); (May Allah be pleased with Her) → (رضي اللّه عنها); (May Allah be pleased with them) → (رضي اللّه عنهم); may Allah be pleased with them → رضي اللّه عنهم; and comma forms such as “Jabir, may Allah be pleased with them,” → “Jabir رضي اللّه عنهم”.')
-      .addToggle(t=>t.setValue(this.plugin.settings.raNormalization).onChange(async v=>{
-        this.plugin.settings.raNormalization=v;
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.raNormalization).onChange(async v=>{
+        this.plugin.pluginSettings.raNormalization=v;
         await this.plugin.saveSettings();
       }));
 
     new Setting(controls).setName('Use standard English transliteration').setDesc('Replace selected transliteration marks with simpler English spellings. Example: Ayât → Ayat.')
-      .addToggle(t=>t.setValue(this.plugin.settings.romanEnglish).onChange(async v=>{
-        this.plugin.settings.romanEnglish=v;
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.romanEnglish).onChange(async v=>{
+        this.plugin.pluginSettings.romanEnglish=v;
         await this.plugin.saveSettings();
       }));
 
     const list=controls.createDiv({cls:'qhf-replacement-list'});
-    for(const rule of this.plugin.settings.replacementRules) this.renderReplacementRule(list,rule,conversionsEnabled);
+    for(const rule of this.plugin.pluginSettings.replacementRules) this.renderReplacementRule(list,rule,conversionsEnabled);
 
     new Setting(controls)
       .addButton(b=>b.setButtonText('Add conversion').setCta().onClick(()=>{
@@ -576,14 +576,14 @@ export class FetcherSettingTab extends PluginSettingTab {
           this.app,
           rule,
           async draft=>{
-            this.plugin.settings.replacementRules.push({...draft});
+            this.plugin.pluginSettings.replacementRules.push({...draft});
             await this.plugin.saveSettings();
             this.refreshAfterRuleChange();
           },
           async()=>{ /* A new, unsaved rule is never present in settings. */ },
           ()=>{ /* Cancel/Escape must not mutate or persist a new rule. */ },
           // Read the master toggle at modal-open time so the warning never lags behind settings.
-          ()=>this.plugin.settings.textConversionsEnabled === true,
+          ()=>this.plugin.pluginSettings.textConversionsEnabled === true,
           true,
         ).open();
       }));
@@ -608,10 +608,10 @@ export class FetcherSettingTab extends PluginSettingTab {
       this.app,
       rule,
       async()=>{ await this.plugin.saveSettings(); this.refreshAfterRuleChange(); },
-      async()=>{ this.plugin.settings.replacementRules=this.plugin.settings.replacementRules.filter(x=>x.id!==rule.id); await this.plugin.saveSettings(); this.refreshAfterRuleChange(); },
+      async()=>{ this.plugin.pluginSettings.replacementRules=this.plugin.pluginSettings.replacementRules.filter(x=>x.id!==rule.id); await this.plugin.saveSettings(); this.refreshAfterRuleChange(); },
       ()=>this.refreshAfterRuleChange(),
       // Read the master toggle at modal-open time so the warning never lags behind settings.
-      ()=>this.plugin.settings.textConversionsEnabled === true,
+      ()=>this.plugin.pluginSettings.textConversionsEnabled === true,
       ).open();
     });
 
@@ -641,9 +641,9 @@ export class FetcherSettingTab extends PluginSettingTab {
   }
 
   private currentQuranAyahStyle(): 'curly'|'square'|'round'|'angle'|'heavyAngle'|'ceiling'|'floor'|'heavyAngleAlt'|'lenticular'|'custom' {
-    const stored=this.plugin.settings.formatting.quranAyahStyle;
+    const stored=this.plugin.pluginSettings.formatting.quranAyahStyle;
     if(stored)return stored;
-    const {quranAyahOpen:open,quranAyahClose:close}=this.plugin.settings.formatting;
+    const {quranAyahOpen:open,quranAyahClose:close}=this.plugin.pluginSettings.formatting;
     if(open==='{'&&close==='}')return 'curly';
     if(open==='['&&close===']')return 'square';
     if(open==='('&&close===')')return 'round';
@@ -657,9 +657,9 @@ export class FetcherSettingTab extends PluginSettingTab {
   }
 
   private currentAyahBracketStyle(): 'angle'|'square'|'round'|'curly'|'heavyAngle'|'ceiling'|'floor'|'heavyAngleAlt'|'lenticular'|'custom' {
-    const stored=this.plugin.settings.formatting.ayahNumberStyle;
+    const stored=this.plugin.pluginSettings.formatting.ayahNumberStyle;
     if(stored)return stored;
-    const {ayahNumberOpen:open,ayahNumberClose:close}=this.plugin.settings.formatting;
+    const {ayahNumberOpen:open,ayahNumberClose:close}=this.plugin.pluginSettings.formatting;
     if(open==='⟪'&&close==='⟫')return 'angle';
     if(open==='['&&close===']')return 'square';
     if(open==='('&&close===')')return 'round';
