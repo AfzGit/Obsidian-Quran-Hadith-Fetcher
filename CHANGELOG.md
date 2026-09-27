@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1
+## 1.0.3
 
 - Add a back action to Quran and Hadith preview modals.
 - Improve Hadith JSON book and collection handling, including number validation.

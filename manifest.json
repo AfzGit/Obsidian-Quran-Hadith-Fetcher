@@ -1,7 +1,7 @@
 {
 	"id": "quran-hadith-fetcher",
 	"name": "Quran and Hadith Fetcher",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"minAppVersion": "1.9.0",
 	"description": "Fetch and insert Islamic texts from the Qur’an and Ahadith using multiple online providers, with many more features.",
 	"author": "AfzGit",

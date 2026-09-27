@@ -1,6 +1,6 @@
 {
 	"name": "quran-hadith-fetcher",
-	"version": "1.0.1",
+	"version": "1.0.3",
 	"private": true,
 	"description": "Fetch Quran and Hadith passages into the active Obsidian note from selectable online providers or installed offline databases. Choose translations, fetch single passages or ranges, insert source links and consistent formatting, and optionally standardize common Islamic text variants.",
 	"scripts": {
