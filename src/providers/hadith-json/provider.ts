@@ -54,7 +54,7 @@ export class HadithJsonProvider implements HadithProvider{
   readonly metadata:ProviderMetadata={id:'hadith-json',name:'Hadith JSON',kind:'hadith',baseUrl:BASE,projectUrl:'https://github.com/AhmedBaset/hadith-json'};
   readonly capabilities:ProviderCapabilities={arabicText:true,englishTranslation:true,multipleTranslations:false,collectionListing:true,rangeRetrieval:true,grading:false,metadata:true,directSourceUrls:true,search:false};
   private readonly bookMemoryCache=new Map<string,unknown>();
-  private readonly bookIndexCache=new Map<string,{source:unknown;index:Map<number,unknown>}>();
+  private readonly bookIndexCache=new Map<string,{source:unknown;index:Map<string,unknown>}>();
   private readonly maxMemoryBooks=3;
   private readonly bookLoads=new Map<string,Promise<unknown>>();
   constructor(private readonly http:HttpClient,private readonly cacheEnabled:()=>boolean=()=>true,private readonly offline?:OfflineDatabaseStore,private readonly persistentCache?:PersistentJsonStore){}
@@ -63,7 +63,6 @@ export class HadithJsonProvider implements HadithProvider{
   async listOfflineDatabases(_ctx:FetchContext):Promise<OfflineDatabaseDefinition[]>{return COLLECTIONS.map(c=>({id:`hadith-json:${c.id}`,providerId:this.metadata.id,kind:'hadith',label:c.name,description:`Arabic and English hadith database for ${c.name}, pinned to hadith-json v1.2.0.`,parts:[{id:'book',label:c.name,url:`${BASE}/db/by_book/${BOOK_PATHS[c.id]}.json`,fileName:'book.json'}]}));}
 
   async fetchHadith(reference:HadithReference,translation:TranslationDefinition,ctx:FetchContext):Promise<HadithResult>{
-    if(typeof reference.hadithNumber!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
     const collection=this.getCollection(reference.collectionId);
     this.validateTranslation(translation);
     const data=await this.loadBook(collection.id,ctx);
@@ -73,14 +72,17 @@ export class HadithJsonProvider implements HadithProvider{
     const collection=this.getCollection(reference.collectionId);
     this.validateTranslation(translation);
     const end=reference.endHadithNumber??reference.hadithNumber;
-    if(typeof reference.hadithNumber!=='number' || typeof end!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
+    if(end===reference.hadithNumber){
+      const data=await this.loadBook(collection.id,ctx);
+      return [this.parseFromBook(reference,collection,translation,data)];
+    }
+    if(typeof reference.hadithNumber!=='number'||typeof end!=='number')throw new AppError('Alphabetic Hadith ranges are not supported.','validation');
     if(end<reference.hadithNumber)throw new AppError('Hadith range end must not be before its start.','validation');
     const data=await this.loadBook(collection.id,ctx);
     const results:HadithResult[]=[];
     for(let number=reference.hadithNumber;number<=end;number++)results.push(this.parseFromBook({kind:'hadith',collectionId:collection.id,hadithNumber:number},collection,translation,data));
     return results;
   }
-
   private getCollection(id:string):CollectionDefinition{const collection=COLLECTIONS.find(c=>c.id===id);if(!collection)throw new AppError('Unknown collection.','validation');return collection;}
   private validateTranslation(translation:TranslationDefinition):void{if(translation.providerId!==this.metadata.id||translation.id!=='en')throw new AppError('Translation is not supported by Hadith JSON.','validation');}
   private persistentKey(collectionId:string):string{return `hadith-json:${DATASET_VERSION}:${collectionId}:book`;}
@@ -104,7 +106,7 @@ export class HadithJsonProvider implements HadithProvider{
    * every lookup. One O(book-size) pass followed by O(1) lookups is cheaper for
    * ranges/repeated requests; source identity prevents stale indexes.
    */
-  private indexBook(collectionId:string,data:unknown):Map<number,unknown>{
+  private indexBook(collectionId:string,data:unknown):Map<string,unknown>{
     const existing=this.bookIndexCache.get(collectionId);
     if(existing && existing.source===data){
       const cachedIndex=existing.index;
@@ -112,14 +114,23 @@ export class HadithJsonProvider implements HadithProvider{
       this.bookIndexCache.set(collectionId,existing);
       return cachedIndex;
     }
-    const index=new Map<number,unknown>();
+    const index=new Map<string,unknown>();
     const items=pickBookData(data);
     items.forEach((value,position)=>{
-      // These files are already split by book, and their IDs are not consistently
-      // book-scoped across collections. The displayed/requested number is the
-      // one-based position in this book's array.
-      const number=position+1;
-      if(!index.has(number)) index.set(number,value);
+      // The one-based array position remains the stable fallback for numeric
+      // references. When the source record exposes an explicit Hadith identifier,
+      // index that too so references such as Muslim's 202a can resolve directly.
+      const positionKey=String(position+1);
+      if(!index.has(positionKey)) index.set(positionKey,value);
+      const record=asRecord(value);
+      for(const candidate of [record?.hadithnumber,record?.hadithNumber,record?.num,record?.ref]){
+        if(typeof candidate!=='string'&&typeof candidate!=='number') continue;
+        const raw=String(candidate).trim();
+        if(!raw) continue;
+        const key=raw.includes(':') ? raw.slice(raw.lastIndexOf(':')+1).toLowerCase() : raw.toLowerCase();
+        if(!key) continue;
+        if(!index.has(key)) index.set(key,value);
+      }
     });
     this.bookIndexCache.set(collectionId,{source:data,index});
     while(this.bookIndexCache.size>this.maxMemoryBooks){
@@ -176,11 +187,10 @@ export class HadithJsonProvider implements HadithProvider{
   }
 
   private parseFromBook(reference:HadithReference,collection:CollectionDefinition,translation:TranslationDefinition,data:unknown):HadithResult{
-    if(typeof reference.hadithNumber!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
     // Build the numeric index once per hot book. A range request can otherwise scan
     // the complete book once for every Hadith, turning a 15-Hadith range into many
     // repeated O(book-size) searches. The bounded index is evicted with the book.
-    const item=this.indexBook(collection.id,data).get(reference.hadithNumber);
+    const item=this.indexBook(collection.id,data).get(String(reference.hadithNumber).trim().toLowerCase());
     if(!item)throw new AppError(`Hadith ${reference.hadithNumber} was not found in ${collection.name}.`,'parse');
     const record=asRecord(item);const english=asRecord(record?.english);
     const arabic=asText(record?.arabic);const englishText=asText(english?.text);const narrator=asText(english?.narrator);

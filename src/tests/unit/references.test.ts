@@ -13,18 +13,26 @@ test('Quran references parse spaced ranges',()=>{
 
 test('Quran references parse',()=>{assert.deepEqual(parseQuranReference('114:1'),{kind:'quran',surah:114,startAyah:1,endAyah:1});assert.deepEqual(parseQuranReference('2:255'),{kind:'quran',surah:2,startAyah:255,endAyah:255});assert.deepEqual(parseQuranReference('2:255-257'),{kind:'quran',surah:2,startAyah:255,endAyah:257});});
 test('Hadith references parse',()=>{assert.equal(parseHadithReference('Bukhari:1')?.collectionId,'bukhari');assert.equal(parseHadithReference('Bukhari:2856')?.hadithNumber,2856);assert.deepEqual(parseHadithReference('Sahih Al-Bukhari:2856'),{kind:'hadith',collectionId:'bukhari',hadithNumber:2856});assert.deepEqual(parseHadithReference('Bukhari:1-5'),{kind:'hadith',collectionId:'bukhari',hadithNumber:1,endHadithNumber:5});assert.deepEqual(parseHadithReference('Bukhari:1 - 5'),{kind:'hadith',collectionId:'bukhari',hadithNumber:1,endHadithNumber:5});assert.deepEqual(parseHadithReference('Muwatta Malik:1-2'),{kind:'hadith',collectionId:'malik',hadithNumber:1,endHadithNumber:2});assert.deepEqual(parseHadithReference('malik:1-2'),{kind:'hadith',collectionId:'malik',hadithNumber:1,endHadithNumber:2});});
-
-test('Muslim references preserve alphabetic hadith numbering',()=>{
-  assert.deepEqual(parseHadithReference('Muslim:202a'),{kind:'hadith',collectionId:'muslim',hadithNumber:'202a'});
-  assert.equal(parseHadithReference('Bukhari:202a'),null);
-});
-
 test('Hadith JSON collection IDs parse as numeric references',()=>{
   const ids=['bukhari','muslim','abudawud','tirmidhi','nasai','ibnmajah','malik','ahmad','darimi','nawawi40','qudsi40','shahwaliullah40','riyadussalihin','mishkat_almasabih','aladab_almufrad','shamail_muhammadiyah','bulugh_almaram'];
   for(const id of ids)assert.deepEqual(parseHadithReference(`${id}:716`),{kind:'hadith',collectionId:id,hadithNumber:716});
 });
+
+test('Hadith references accept canonical provider collection IDs and Muslim suffixes',()=>{
+  assert.deepEqual(parseHadithReference('adab:1'),{kind:'hadith',collectionId:'adab',hadithNumber:1});
+  assert.deepEqual(parseHadithReference('shamail:1'),{kind:'hadith',collectionId:'shamail',hadithNumber:1});
+  assert.deepEqual(parseHadithReference('muslim:202a'),{kind:'hadith',collectionId:'muslim',hadithNumber:'202a'});
+  assert.deepEqual(parseHadithReference('muslim:202A'),{kind:'hadith',collectionId:'muslim',hadithNumber:'202a'});
+});
 test('validation rejects bad Quran ranges',()=>{assert.ok(validateQuranReference({kind:'quran',surah:0,startAyah:1,endAyah:1}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:999,endAyah:999}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:255,endAyah:254}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:255,endAyah:287}));});
 test('validation rejects unknown Hadith collection',()=>{assert.equal(validateHadithReference({kind:'hadith',collectionId:'nope',hadithNumber:1},[{id:'bukhari',name:'Bukhari',providerId:'x'}]),'Unknown collection.');});
+
+test('Muslim validation accepts alphabetic suffixes but rejects them elsewhere',()=>{
+  const collections=[{id:'muslim',name:'Muslim',providerId:'hadith-unlocked'},{id:'bukhari',name:'Bukhari',providerId:'hadith-unlocked'}];
+  assert.equal(validateHadithReference({kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},collections),null);
+  assert.equal(validateHadithReference({kind:'hadith',collectionId:'bukhari',hadithNumber:'202a'},collections),'Invalid Hadith reference.');
+  assert.match(validateHadithReference({kind:'hadith',collectionId:'muslim',hadithNumber:'202a',endHadithNumber:'203a'},collections) ?? '',/Alphabetic Hadith ranges are not supported/);
+});
 
 
 test('Hadith validation enforces range limits',()=>{
@@ -32,13 +40,6 @@ test('Hadith validation enforces range limits',()=>{
   assert.equal(validateHadithReference({kind:'hadith',collectionId:'bukhari',hadithNumber:1,endHadithNumber:5},collections,5),null);
   assert.match(validateHadithReference({kind:'hadith',collectionId:'bukhari',hadithNumber:1,endHadithNumber:6},collections,5) ?? '',/limit is 5/);
   assert.match(validateHadithReference({kind:'hadith',collectionId:'bukhari',hadithNumber:5,endHadithNumber:4},collections,5) ?? '',/start must be less than or equal/);
-});
-
-
-test('Muslim validation accepts an alphabetic hadith identifier',()=>{
-  const collections=[{id:'muslim',name:'Sahih Muslim',providerId:'hadith-api'}];
-  assert.equal(validateHadithReference({kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},collections,5),null);
-  assert.match(validateHadithReference({kind:'hadith',collectionId:'muslim',hadithNumber:'202a',endHadithNumber:'203a'},collections,5) ?? '',/Alphabetic Hadith ranges/);
 });
 
 test('Quran validation enforces range limits',()=>{

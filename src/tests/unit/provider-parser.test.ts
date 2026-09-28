@@ -199,17 +199,6 @@ test('Hadith API parser preserves grading authors from either language edition',
   assert.ok(r.grades.some(g=>g.text==='Hasan'));
 });
 
-
-test('Hadith API parser matches alphabetic Muslim hadith numbers',()=>{
-  const r=parseHadithApiResponse(
-    undefined,
-    {hadiths:[{hadithnumber:'202a',text:'EN 202a'}]},
-    {kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},
-    'Sahih Muslim','hadith-api'
-  );
-  assert.equal(r.english,'EN 202a');
-});
-
 test('Hadith Unlocked parser preserves grading author from alternate fields',()=>{
   const r=parseHadithUnlockedResponse(
     [{ref:'muslim:200',num:200,body:'AR',body_en:'EN',grade:{grade_en:'Sound',grader_en:'Al-Albani'}}],
@@ -218,6 +207,26 @@ test('Hadith Unlocked parser preserves grading author from alternate fields',()=
   );
   assert.equal(r.grades[0]?.text,'Sound');
   assert.equal(r.grades[0]?.author,'Al-Albani');
+});
+
+test('Hadith Unlocked parser matches Muslim alphabetic references',()=>{
+  const r=parseHadithUnlockedResponse(
+    [{ref:'muslim:202a',num:'202a',body:'AR',body_en:'EN'}],
+    {kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},
+    {id:'muslim',name:'Sahih Muslim',providerId:'hadith-unlocked'},'https://hadithunlocked.com/muslim:202a'
+  );
+  assert.equal(r.english,'EN');
+  assert.equal(r.reference.hadithNumber,'202a');
+});
+
+test('Hadith API parser matches alphabetic Hadith numbers',()=>{
+  const r=parseHadithApiResponse(
+    {hadiths:[{hadithnumber:'202a',text:'AR'}]},
+    {hadiths:[{hadithnumber:'202a',text:'EN'}]},
+    {kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},'Sahih Muslim','hadith-api'
+  );
+  assert.equal(r.arabic,'AR');
+  assert.equal(r.english,'EN');
 });
 
 

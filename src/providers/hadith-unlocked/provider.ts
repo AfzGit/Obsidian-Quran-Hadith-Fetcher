@@ -58,7 +58,7 @@ export class HadithUnlockedProvider implements HadithProvider {
     const end = reference.endHadithNumber ?? reference.hadithNumber;
     if (end === reference.hadithNumber) return [await this.fetchHadith(reference, translation, ctx)];
     if (typeof reference.hadithNumber !== 'number' || typeof end !== 'number') {
-      throw new AppError('Alphabetic Hadith ranges are not supported; enter a single reference such as 202a.','validation');
+      throw new AppError('Alphabetic Hadith ranges are not supported.','validation');
     }
     const results: HadithResult[] = [];
     const concurrency = 4;
@@ -69,7 +69,6 @@ export class HadithUnlockedProvider implements HadithProvider {
     }
     return results;
   }
-
   async healthCheck(ctx: FetchContext): Promise<ProviderHealth> {
     const started=performance.now();
     // Probe one small Hadith JSON response instead of the collection index.

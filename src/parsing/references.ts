@@ -75,15 +75,10 @@ export function parseHadithReference(input: string): HadithReference | null {
   if (!match) return null;
   const alias = match[1]?.toLocaleLowerCase('en-US');
   if (!alias) return null;
-  const collectionId = HADITH_ALIASES[alias];
-  if (!collectionId) return null;
-  const rawHadithNumber = match[2]!;
-  const rawEndHadithNumber = match[3];
-  const allowsAlphabeticNumbering = collectionId === 'muslim';
-  const isValidNumber = (raw: string): boolean => allowsAlphabeticNumbering || /^\d{1,6}$/u.test(raw);
-  if (!isValidNumber(rawHadithNumber) || (rawEndHadithNumber && !isValidNumber(rawEndHadithNumber))) return null;
-  const hadithNumber = /^\d+$/u.test(rawHadithNumber) ? Number(rawHadithNumber) : rawHadithNumber.toLowerCase();
-  const endHadithNumber = rawEndHadithNumber ? (/^\d+$/u.test(rawEndHadithNumber) ? Number(rawEndHadithNumber) : rawEndHadithNumber.toLowerCase()) : hadithNumber;
+  const collectionId = HADITH_ALIASES[alias] ?? alias;
+  const parseHadithNumber = (raw: string): number | string => /^\d{1,6}$/u.test(raw) ? Number(raw) : raw.toLowerCase();
+  const hadithNumber = parseHadithNumber(match[2]!);
+  const endHadithNumber = match[3] ? parseHadithNumber(match[3]) : hadithNumber;
   return { kind: 'hadith', collectionId, hadithNumber, ...(endHadithNumber !== hadithNumber ? { endHadithNumber } : {}) };
 }
 

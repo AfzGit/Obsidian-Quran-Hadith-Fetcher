@@ -161,7 +161,7 @@ export class HadithApiProvider implements HadithProvider {
     const end = reference.endHadithNumber ?? reference.hadithNumber;
     if (end === reference.hadithNumber) return [await this.fetchHadith(reference, translation, ctx)];
     if (typeof reference.hadithNumber !== 'number' || typeof end !== 'number') {
-      throw new AppError('Alphabetic Hadith ranges are not supported; enter a single reference such as 202a.','validation');
+      throw new AppError('Alphabetic Hadith ranges are not supported.','validation');
     }
     const results: HadithResult[] = [];
     const concurrency = 4;
@@ -172,7 +172,6 @@ export class HadithApiProvider implements HadithProvider {
     }
     return results;
   }
-
   /**
    * Try the documented CDN first, then raw GitHub mirrors only for failures where
    * a mirror can realistically help. A 429 must not fan out into multiple mirrors:
@@ -181,12 +180,12 @@ export class HadithApiProvider implements HadithProvider {
    * authorization failures likewise indicate that another mirror will not fix the
    * request.
    */
-  private async getEditionHadith(edition: string, hadithNumber: HadithReference['hadithNumber'], signal: AbortSignal) {
+  private async getEditionHadith(edition: string, hadithNumber: number | string, signal: AbortSignal) {
     const urls = [
-      `${BASE}/editions/${edition}/${hadithNumber}.min.json`,
-      `${BASE}/editions/${edition}/${hadithNumber}.json`,
-      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/${edition}/${hadithNumber}.min.json`,
-      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/${edition}/${hadithNumber}.json`,
+      `${BASE}/editions/${edition}/${encodeURIComponent(String(hadithNumber))}.min.json`,
+      `${BASE}/editions/${edition}/${encodeURIComponent(String(hadithNumber))}.json`,
+      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/${edition}/${encodeURIComponent(String(hadithNumber))}.min.json`,
+      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/${edition}/${encodeURIComponent(String(hadithNumber))}.json`,
     ];
     let lastError: unknown;
     for (const url of urls) {
