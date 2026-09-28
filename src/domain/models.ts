@@ -38,11 +38,13 @@ export interface QuranReference {
   endAyah: number;
 }
 
+export type HadithNumber = number | string;
+
 export interface HadithReference {
   kind: 'hadith';
   collectionId: string;
-  hadithNumber: number;
-  endHadithNumber?: number;
+  hadithNumber: HadithNumber;
+  endHadithNumber?: HadithNumber;
 }
 
 export interface Ayah {

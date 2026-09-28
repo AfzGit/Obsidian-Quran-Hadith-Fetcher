@@ -34,11 +34,11 @@ function decodeHtmlEntities(value:string):string {
 export class InputModal extends Modal {
   private input!: HTMLInputElement;
   private errorEl!: HTMLElement;
-  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string)=>void, private readonly onCancel:()=>void, private readonly validateInput?:(value:string)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric'){ super(app); }
+  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string)=>void, private readonly onCancel:()=>void, private readonly validateInput?:(value:string)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric', private readonly inputType:HTMLInputElement['type']='text'){ super(app); }
   override onOpen():void {
     this.contentEl.empty();
     this.titleEl.setText(this.title);
-    new Setting(this.contentEl).setName('Reference').addText(t=>{this.input=t.inputEl;t.setPlaceholder(this.placeholder).setValue(this.initial);this.input.inputMode=this.inputMode;this.input.autocomplete='off';this.input.spellcheck=false;});
+    new Setting(this.contentEl).setName('Reference').addText(t=>{this.input=t.inputEl;t.setPlaceholder(this.placeholder).setValue(this.initial);this.input.type=this.inputType;this.input.inputMode=this.inputMode;this.input.autocomplete='off';this.input.spellcheck=false;});
     this.errorEl=this.contentEl.createDiv({cls:'qhf-input-error'});
     const row=this.contentEl.createDiv({cls:'qhf-modal-actions'});
     row.createEl('button',{text:'Cancel'}).onclick=()=>{this.close();this.onCancel();};

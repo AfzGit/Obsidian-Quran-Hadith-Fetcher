@@ -160,6 +160,9 @@ export class HadithApiProvider implements HadithProvider {
   async fetchHadithRange(reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult[]> {
     const end = reference.endHadithNumber ?? reference.hadithNumber;
     if (end === reference.hadithNumber) return [await this.fetchHadith(reference, translation, ctx)];
+    if (typeof reference.hadithNumber !== 'number' || typeof end !== 'number') {
+      throw new AppError('Alphabetic Hadith ranges are not supported; enter a single reference such as 202a.','validation');
+    }
     const results: HadithResult[] = [];
     const concurrency = 4;
     for (let start = reference.hadithNumber; start <= end; start += concurrency) {
@@ -178,7 +181,7 @@ export class HadithApiProvider implements HadithProvider {
    * authorization failures likewise indicate that another mirror will not fix the
    * request.
    */
-  private async getEditionHadith(edition: string, hadithNumber: number, signal: AbortSignal) {
+  private async getEditionHadith(edition: string, hadithNumber: HadithReference['hadithNumber'], signal: AbortSignal) {
     const urls = [
       `${BASE}/editions/${edition}/${hadithNumber}.min.json`,
       `${BASE}/editions/${edition}/${hadithNumber}.json`,

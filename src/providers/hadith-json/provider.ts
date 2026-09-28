@@ -63,6 +63,7 @@ export class HadithJsonProvider implements HadithProvider{
   async listOfflineDatabases(_ctx:FetchContext):Promise<OfflineDatabaseDefinition[]>{return COLLECTIONS.map(c=>({id:`hadith-json:${c.id}`,providerId:this.metadata.id,kind:'hadith',label:c.name,description:`Arabic and English hadith database for ${c.name}, pinned to hadith-json v1.2.0.`,parts:[{id:'book',label:c.name,url:`${BASE}/db/by_book/${BOOK_PATHS[c.id]}.json`,fileName:'book.json'}]}));}
 
   async fetchHadith(reference:HadithReference,translation:TranslationDefinition,ctx:FetchContext):Promise<HadithResult>{
+    if(typeof reference.hadithNumber!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
     const collection=this.getCollection(reference.collectionId);
     this.validateTranslation(translation);
     const data=await this.loadBook(collection.id,ctx);
@@ -72,6 +73,7 @@ export class HadithJsonProvider implements HadithProvider{
     const collection=this.getCollection(reference.collectionId);
     this.validateTranslation(translation);
     const end=reference.endHadithNumber??reference.hadithNumber;
+    if(typeof reference.hadithNumber!=='number' || typeof end!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
     if(end<reference.hadithNumber)throw new AppError('Hadith range end must not be before its start.','validation');
     const data=await this.loadBook(collection.id,ctx);
     const results:HadithResult[]=[];
@@ -174,6 +176,7 @@ export class HadithJsonProvider implements HadithProvider{
   }
 
   private parseFromBook(reference:HadithReference,collection:CollectionDefinition,translation:TranslationDefinition,data:unknown):HadithResult{
+    if(typeof reference.hadithNumber!=='number') throw new AppError('Alphabetic Hadith references are not supported by Hadith JSON.','validation');
     // Build the numeric index once per hot book. A range request can otherwise scan
     // the complete book once for every Hadith, turning a 15-Hadith range into many
     // repeated O(book-size) searches. The bounded index is evicted with the book.

@@ -71,14 +71,19 @@ export function parseQuranReference(input: string): QuranReference | null {
  */
 export function parseHadithReference(input: string): HadithReference | null {
   const value = normalizeInput(input);
-  const match = /^(.+?)\s*:\s*(\d{1,6})(?:\s*[-–—]\s*(\d{1,6}))?$/.exec(value);
+  const match = /^(.+?)\s*:\s*(\d{1,6}[a-z]?)(?:\s*[-–—]\s*(\d{1,6}[a-z]?))?$/iu.exec(value);
   if (!match) return null;
   const alias = match[1]?.toLocaleLowerCase('en-US');
   if (!alias) return null;
   const collectionId = HADITH_ALIASES[alias];
   if (!collectionId) return null;
-  const hadithNumber = Number(match[2]);
-  const endHadithNumber = match[3] ? Number(match[3]) : hadithNumber;
+  const rawHadithNumber = match[2]!;
+  const rawEndHadithNumber = match[3];
+  const allowsAlphabeticNumbering = collectionId === 'muslim';
+  const isValidNumber = (raw: string): boolean => allowsAlphabeticNumbering || /^\d{1,6}$/u.test(raw);
+  if (!isValidNumber(rawHadithNumber) || (rawEndHadithNumber && !isValidNumber(rawEndHadithNumber))) return null;
+  const hadithNumber = /^\d+$/u.test(rawHadithNumber) ? Number(rawHadithNumber) : rawHadithNumber.toLowerCase();
+  const endHadithNumber = rawEndHadithNumber ? (/^\d+$/u.test(rawEndHadithNumber) ? Number(rawEndHadithNumber) : rawEndHadithNumber.toLowerCase()) : hadithNumber;
   return { kind: 'hadith', collectionId, hadithNumber, ...(endHadithNumber !== hadithNumber ? { endHadithNumber } : {}) };
 }
 

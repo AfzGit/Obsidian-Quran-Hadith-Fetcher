@@ -331,6 +331,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         const ref=parseQuranReference(`${surah}:${normalized}`);
         return ref ? validateQuranReference(ref, this.pluginSettings.quranFetchLimit) : 'Invalid Ayah/range.';
       },
+      'text',
     ).open();
   }
 
@@ -423,17 +424,19 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       // Offline status is only UI decoration; collection selection must still work.
     }
     new CollectionModal(this.app, collections, collection => {
-      new InputModal(this.app, `${collection.name} — Hadith`, 'e.g. 1 or 1-5', '', async value => {
+      const isMuslim = collection.id.toLocaleLowerCase('en-US') === 'muslim';
+      new InputModal(this.app, `${collection.name} — Hadith`, isMuslim ? 'e.g. 202 or 202a' : 'e.g. 1 or 1-5', '', async value => {
         const normalized=value.replace(/\s*[-–—]\s*/u,'-');
         const ref=parseHadithReference(`${collection.id}:${normalized}`);
         if(!ref)return;
         await this.chooseHadithOptions(editor, ref, operation.id, operation.signal, collections);
       }, () => this.operations.cancel(), value => {
         const normalized=value.replace(/\s*[-–—]\s*/u,'-');
-        if(!/^\d{1,6}(?:-\d{1,6})?$/.test(normalized)) return 'Enter a Hadith number or range, e.g. 1 or 1-5.';
+        const pattern=isMuslim ? /^\d{1,6}[a-z]?(?:-\d{1,6}[a-z]?)?$/iu : /^\d{1,6}(?:-\d{1,6})?$/u;
+        if(!pattern.test(normalized)) return isMuslim ? 'Enter a Hadith number such as 202 or 202a.' : 'Enter a Hadith number or range, e.g. 1 or 1-5.';
         const ref=parseHadithReference(`${collection.id}:${normalized}`);
         return ref ? validateHadithReference(ref,collections,this.pluginSettings.hadithFetchLimit) : 'Invalid Hadith/range.';
-      }).open();
+      }, 'text').open();
     }, offlineCollectionIds).open();
   }
 
@@ -484,7 +487,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       const translation = translations.find(t => t.id === this.pluginSettings.hadithTranslation && t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === this.pluginSettings.hadithTranslation) ?? translations.find(t => t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === 'eng') ?? translations[0];
       if(!translation) throw new AppError('No Hadith translation is configured for this provider.','validation');
       const end=ref.endHadithNumber ?? ref.hadithNumber;
-      if(end - ref.hadithNumber + 1 > this.pluginSettings.hadithFetchLimit) throw new AppError(`Hadith fetch limit is ${this.pluginSettings.hadithFetchLimit} hadiths.`,'validation');
+      if(typeof ref.hadithNumber === 'number' && typeof end === 'number' && end - ref.hadithNumber + 1 > this.pluginSettings.hadithFetchLimit) throw new AppError(`Hadith fetch limit is ${this.pluginSettings.hadithFetchLimit} hadiths.`,'validation');
       const results = await provider.fetchHadithRange(ref, translation, {signal});
       if (!this.operations.isCurrent(id)) return;
       const { normalizeArabic, normalizeEnglish } = createNormalizers(this.pluginSettings);

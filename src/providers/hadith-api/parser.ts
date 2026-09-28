@@ -45,9 +45,13 @@ export function parseHadithApiResponse(arabicRaw: unknown, englishRaw: unknown, 
   return result;
 }
 
-function selectHadith(raw: unknown, no: number): ApiHadith|undefined {
+function selectHadith(raw: unknown, no: HadithReference['hadithNumber']): ApiHadith|undefined {
   if (!raw || typeof raw !== 'object') return undefined;
+  const target = String(no).normalize('NFKC').trim().toLowerCase();
+  const matches = (value: unknown): boolean => typeof value === 'string' || typeof value === 'number'
+    ? String(value).normalize('NFKC').trim().toLowerCase() === target
+    : false;
   const root = raw as ApiContainer;
-  return root.hadiths?.find((h) => Number(h.hadithnumber) === no) ?? (('hadithnumber' in root) && Number(root.hadithnumber) === no ? root as unknown as ApiHadith : undefined);
+  return root.hadiths?.find((h) => matches(h.hadithnumber)) ?? (('hadithnumber' in root) && matches(root.hadithnumber) ? root as unknown as ApiHadith : undefined);
 }
 

@@ -67,7 +67,8 @@ function extractEnglishIsnad(item: HadithUnlockedItem): string | undefined {
 }
 function itemMatchesReference(item: HadithUnlockedItem, reference: HadithReference): boolean {
   const ref = str(item.ref)?.toLowerCase(); if (ref) return ref === `${reference.collectionId}:${reference.hadithNumber}`.toLowerCase();
-  const num = Number(item.num); return Number.isInteger(num) && num === reference.hadithNumber;
+  const num = str(item.num);
+  return num ? num.normalize('NFKC').trim().toLowerCase() === String(reference.hadithNumber).normalize('NFKC').trim().toLowerCase() : false;
 }
 function firstItem(raw: unknown, reference: HadithReference): HadithUnlockedItem | undefined {
   const candidates: HadithUnlockedItem[]=[];
