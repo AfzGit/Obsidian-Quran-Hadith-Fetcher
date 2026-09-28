@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+- Fixed some books not getting detected
+- Used text field input for compatibility with mobile
+- Allowed letters for Sahih Muslim (like 202a)
+
 ## 1.0.3
 
 - Add a back action to Quran and Hadith preview modals.
