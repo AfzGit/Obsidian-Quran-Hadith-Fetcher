@@ -76,7 +76,7 @@ Quran and Hadith providers are selected independently in **Settings → Provider
 | Quran  | [Quran Project API](https://github.com/The-Quran-Project/Quran-API) | Arabic text and English, Bengali, and Urdu translations.                                                          |
 | Hadith | [hadith-api](https://github.com/fawazahmed0/hadith-api)             | Collections and translations from its edition catalog, with Arabic and translation editions retrieved separately. |
 | Hadith | [Hadith Unlocked](https://hadithunlocked.com)                       | Its supported collection catalog and English translation.                                                         |
-| Hadith | [Hadith JSON](https://github.com/AhmedBaset/hadith-json)            | 17 books from the pinned `hadith-json` v1.2.0 dataset, with Arabic and English text.                              |
+| Hadith | [Hadith JSON](https://github.com/AhmedBaset/hadith-json)            | 17 books from the pinned `hadith-json` v1.2.0 dataset, with Arabic and English text. Uses [Sunnah.com](https://www.sunnah.com) data (e.g., using 202a for Sahih Muslim)                              |
 
 Providers may differ in the collections, translations, grading, source links, and offline data they expose. The plugin does not guarantee that every number exists in every provider's version of a collection; the provider response is authoritative for an individual Hadith number.
 
@@ -142,6 +142,10 @@ scripts/      Release metadata check and release packaging
 ```
 
 The plugin uses Obsidian's APIs for HTTP and vault storage.
+
+# Known Bugs
+
+- [ ] HadithUnlocked Offline databases do not work properly
 
 # License
 
