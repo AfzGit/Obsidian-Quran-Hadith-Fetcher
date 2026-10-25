@@ -17,7 +17,8 @@ if (packageJson.version !== manifest.version || lockfile.version !== manifest.ve
 if (versions[manifest.version] !== manifest.minAppVersion) {
   throw new Error(`versions.json must map ${manifest.version} to minAppVersion ${manifest.minAppVersion}`);
 }
-if (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== manifest.version) {
+const isTag = process.env.GITHUB_REF_TYPE === 'tag' || process.env.GITHUB_REF?.startsWith('refs/tags/');
+if (isTag && process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== manifest.version) {
   throw new Error(`Release tag ${process.env.GITHUB_REF_NAME} must exactly match manifest version ${manifest.version}`);
 }
 
