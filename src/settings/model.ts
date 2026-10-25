@@ -2,7 +2,7 @@ import { DEFAULT_FORMATTING, type FormattingConfig } from '../core/formatting';
 import { DEFAULT_REPLACEMENT_RULES, type ReplacementRule } from '../core/normalization';
 import type { QuranWebsite } from '../core/url';
 import type { OutputOptions, QuranRangeMode } from '../domain/models';
-import { COMMAND_DEFINITIONS, defaultCommandVisibility, type CommandVisibility } from '../core/commands';
+import { defaultCommandVisibility, type CommandVisibility } from '../core/commands';
 
 export interface Settings {
   schemaVersion:number;

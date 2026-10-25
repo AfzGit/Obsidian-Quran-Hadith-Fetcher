@@ -37,7 +37,7 @@ const BOOK_PATHS:Readonly<Record<string,string>>={
 function asRecord(value:unknown):Record<string,unknown>|undefined{return typeof value==='object'&&value!==null?value as Record<string,unknown>:undefined;}
 function cleanText(value:string):string{
   const normalized=value.replace(/\\n/gu,' ').replace(/\r?\n/gu,' ').replace(/\s+/gu,' ').trim();
-  return normalized.replace(/:/gu,(colon,index,text)=>{
+  return normalized.replace(/:/gu,(colon:string,index:number,text:string)=>{
     const before=text[index-1]??'';
     const after=text[index+1]??'';
     if(/\d/u.test(before)&&/\d/u.test(after))return colon;
@@ -93,7 +93,7 @@ export class HadithJsonProvider implements HadithProvider{
     this.bookMemoryCache.delete(collectionId);
     this.bookMemoryCache.set(collectionId,data);
     while(this.bookMemoryCache.size>this.maxMemoryBooks){
-      const oldest=this.bookMemoryCache.keys().next().value as string|undefined;
+      const oldest=this.bookMemoryCache.keys().next().value;
       if(oldest===undefined)break;
       this.bookMemoryCache.delete(oldest);
       this.bookIndexCache.delete(oldest);
@@ -134,7 +134,7 @@ export class HadithJsonProvider implements HadithProvider{
     });
     this.bookIndexCache.set(collectionId,{source:data,index});
     while(this.bookIndexCache.size>this.maxMemoryBooks){
-      const oldest=this.bookIndexCache.keys().next().value as string|undefined;
+      const oldest=this.bookIndexCache.keys().next().value;
       if(oldest===undefined)break;
       this.bookIndexCache.delete(oldest);
     }

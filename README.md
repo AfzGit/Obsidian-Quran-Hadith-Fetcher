@@ -92,7 +92,7 @@ Open **Settings → Offline databases → Manage** or run **Manage offline datab
 - **Quran Project API:** the complete Quran with Arabic plus English, Bengali, and Urdu translations, downloaded as 114 Surah files.
 - **Hadith Unlocked:** a complete JSON database for each supported collection.
 - **hadith-api:** paired Arabic and English editions for collections that provide both.
-- **Hadith JSON:** a complete book JSON file for each of its 17 supported books.
+- **Hadith JSON:** a complete book JSON file for each of its 17 supported books. Scrapped from [Sunnah.com](https://www.sunnah.com).
 
 Where a provider has a relevant installed database, it checks local data before its runtime cache or network source. Offline coverage depends on which datasets and translations you install. The plugin validates downloaded parts as JSON and installs a database as a unit; cancelled or failed replacement keeps the prior installed copy.
 
@@ -145,7 +145,17 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 
 # Known Bugs
 
-- [ ] HadithUnlocked Offline databases do not work properly
+- ", peace and blessings be upon him," returns ", (ﷺ)," instead of "ﷺ"
+- "(ﷺ)" is replaced by "ﷺ" in Sunan Abu Dawud 1420. Grading does not work too. (HadithUnlocked)
+
+# Roadmap
+
+- [ ] Add option to change provider in output options
+- [ ] Add comma separated fetching support (e.g., [202-204, 300, 100-105])
+- [ ] Display better error messages if Hadith is not found
+- [ ] Make Database Installations async
+- [ ] Expand salutations scope like: `(May the peace and blessing of Allah be upon him)`
+- [ ] Options to replace hadithjson replacements with Sunnah.com links
 
 # License
 

@@ -29,10 +29,10 @@ function restoreBlessings(text: string, tokens: readonly string[]): string {
 
 function normalizeArabicBlessingCore(text: string, restoreExisting = true, protectExisting = true): string {
   // Existing ﷺ and (ﷺ) are protected before NFKC so source text is preserved.
-  const protectedValue = protectExisting ? protectExistingBlessings(text) : { text, tokens: [] as string[] };
+  const protectedValue = protectExisting ? protectExistingBlessings(text) : { text, tokens: [] };
   const normalizedText = protectedValue.text.normalize('NFKC');
   const tokens = [...normalizedText.matchAll(/\S+/gu)].map((m) => {
-    const raw = m[0]!;
+    const raw = m[0];
     let leftTrim = 0;
     let rightTrim = raw.length;
     while (leftTrim < rightTrim && /[\p{P}\p{S}]/u.test(raw[leftTrim]!)) leftTrim++;
@@ -75,67 +75,69 @@ export function normalizeArabicBlessing(text: string): string {
   return normalizeArabicBlessingCore(text);
 }
 
-function parenthesizeNewBlessings(text: string): string {
-  let out = '';
-  let depth = 0;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]!;
-    if (char === '(') depth++;
-    if (char === 'ﷺ') {
-      out += depth > 0 ? 'ﷺ' : '(ﷺ)';
-      continue;
-    }
-    out += char;
-    if (char === ')' && depth > 0) depth--;
-  }
-  return out.replace(/\(\s*ﷺ\s*\)/gu, '(ﷺ)');
-}
-
 // Public blessing entry point. The implementation protects already-normalized
 // ﷺ tokens, normalizes supported Arabic/English variants, and restores protected
 // tokens so running the function a second time is idempotent.
 export function normalizeBlessing(text: string): string {
   // Keep existing blessings protected so they retain their original
-  // parenthesis/spacing. Newly-created blessings are parenthesized unless
-  // they come from the explicit Allah-wording variants below.
+  // parenthesis/spacing.
   const protectedValue = protectExistingBlessings(text);
-  const bareBlessingToken = '__QHF_BARE_BLESSING__';
 
   let out = protectedValue.text;
 
   // These English phrasings are compacted to ﷺ. The newer "may Allah bless..."
   // comma form deliberately keeps exactly one space before the glyph.
   for (const [pattern, replacement] of BARE_ENGLISH_PATTERNS) {
-    out = out.replace(pattern, replacement === 'SPACE' ? ` ${bareBlessingToken}` : bareBlessingToken);
+    out = out.replace(pattern, replacement === 'SPACE' ? ' ﷺ' : 'ﷺ');
   }
 
-  // Normalize source Arabic first. Arabic صلى الله عليه وسلم is already an explicit
-  // salutation marker and must become a bare ﷺ unless the source itself supplied
-  // parentheses. Protect those newly-created Arabic markers from the English
-  // parenthesizer so it does not turn them into (ﷺ).
+  // Normalize source Arabic. Arabic صلى الله عليه وسلم is itself an explicit
+  // salutation marker, so it becomes ﷺ wherever it appears.
   out = normalizeArabicBlessingCore(out, false, false);
-  const arabicBlessingToken = '__QHF_ARABIC_BLESSING__';
-  out = out.replace(/ﷺ/gu, arabicBlessingToken);
 
+  // Phrasings that are only unambiguous next to a delimiter. Only the words are
+  // matched, so the parentheses the source supplied are kept.
+  for (const pattern of PARENTHESIZED_ENGLISH_PATTERNS) {
+    out = out.replace(pattern, '(ﷺ)');
+  }
+
+  // Abbreviations and plain phrasings. These patterns deliberately match only the
+  // salutation words themselves, so any enclosure the source provided -- (), [], "" --
+  // is left in place: (SAW) -> (ﷺ), SAW -> ﷺ. Parentheses are never added, and the
+  // replaced word itself is always the bare glyph. The comma-wrapped wordings above
+  // are the only forms that consume their surrounding punctuation.
   for (const pattern of ENGLISH_PATTERNS) {
     out = out.replace(pattern, 'ﷺ');
   }
 
-  out = parenthesizeNewBlessings(out);
-  out = out.replace(new RegExp(bareBlessingToken, 'gu'), 'ﷺ');
-  out = out.replace(new RegExp(arabicBlessingToken, 'gu'), 'ﷺ');
+  // Tidy spacing only inside parentheses that were already there.
+  out = out.replace(/\(\s*ﷺ\s*\)/gu, '(ﷺ)');
   return restoreBlessings(out, protectedValue.tokens);
 }
 
 // NORMALIZATION CONVERSION CATALOG — document each accepted source form and its
 // output here so overlapping patterns and existing variants remain visible.
 //
-// BARE_ENGLISH_PATTERNS (standalone/new blessings intentionally rendered bare):
+// Output policy: only the salutation words are replaced, with the bare ﷺ. Any
+// enclosure the source supplied is preserved, and parentheses are never added:
+//   SAW        → ﷺ
+//   (SAW)      → (ﷺ)
+//   [peace be upon him] → [ﷺ]
+//   (peace and blessings of Allah upon him) → (ﷺ)
+// Text that already contains ﷺ or (ﷺ) is left exactly as written.
+//
+// BARE_ENGLISH_PATTERNS (wordings that also consume their own wrapping commas):
 //   1. May peace and blessings be upon him                            → ﷺ
-//   2. , peace and blessings of Allah upon him,                       →  ﷺ
-//   3. , may peace and blessings of Allah upon him,                   →  ﷺ
-//   4. , may Allah bless him and grant him peace [optional final comma] →  ﷺ
+//   2. , may peace and blessing be upon him[,]                        →  ﷺ
+//   3. , peace and blessings of Allah upon him,                       →  ﷺ
+//   4. , may peace and blessings of Allah upon him,                   →  ﷺ
+//   5. , may Allah bless him and grant him peace [optional final comma] →  ﷺ
 //      Example: Prophet, may Allah bless him and grant him peace used → Prophet ﷺ used
+//
+// PARENTHESIZED_ENGLISH_PATTERNS (wording only recognized inside parentheses):
+//   • (peace and blessings of Allah upon him)                         → (ﷺ)
+//   • (may peace and blessings of Allah upon him)                     → (ﷺ)
+//   • (may Allah bless him and grant him peace)                       → (ﷺ)
 //
 const BARE_ENGLISH_PATTERNS: Array<[RegExp, 'BARE' | 'SPACE']> = [
   // May peace and blessings be upon him → bare ﷺ.
@@ -153,38 +155,38 @@ const BARE_ENGLISH_PATTERNS: Array<[RegExp, 'BARE' | 'SPACE']> = [
   [/(?:,\s+|\s+)may\s+Allah\s+bless\s+him\s+and\s+grant\s+him\s+peace(?:\s*,)?/giu, 'SPACE'],
 ];
 
+const PARENTHESIZED_ENGLISH_PATTERNS: RegExp[] = [
+  // (peace and blessings of Allah upon him) / (may ...)   → (ﷺ)
+  /\(\s*(?:may\s+)?peace\s+and\s+blessings\s+of\s+Allah\s+upon\s+him\s*\)/giu,
+
+  // (may Allah bless him and grant him peace)             → (ﷺ)
+  /\(\s*may\s+Allah\s+bless\s+him\s+and\s+grant\s+him\s+peace\s*\)/giu,
+];
+
 const ENGLISH_PATTERNS: RegExp[] = [
-  // (peace and blessings of Allah upon him)                          → (ﷺ)
-  // (may Allah bless him and grant him peace)                         → (ﷺ)
-  // S.A.W.S / S.A.W / P.B.U.H variants and spaced forms             → (ﷺ)
-  // peace/ blessings phrasings without the comma-wrapped forms      → (ﷺ)
-  /\(\s*peace\s+and\s+blessings\s+of\s+Allah\s+upon\s+him\s*\)/giu, // Parenthesized Allah blessing → (ﷺ)
+  // Abbreviations, and phrasings that read fine on their own. Only the words are
+  // matched, so source parentheses/enclosures survive: (SAW) → (ﷺ), SAW → ﷺ.
+  /\bS\.\s*A\.\s*W\.\s*S\.?(?=$|[^\p{L}])/giu, // S.A.W.S → ﷺ
 
-  /\(\s*may\s+Allah\s+bless\s+him\s+and\s+grant\s+him\s+peace\s*\)/giu, // Parenthesized may-Allah blessing → (ﷺ)
+  /\bS\.\s*A\.\s*W\.?(?=$|[^\p{L}])/giu, // S.A.W → ﷺ
 
-  /\bS\.\s*A\.\s*W\.\s*S\.?(?=$|[^\p{L}])/giu, // S.A.W.S → (ﷺ)
+  /\bP\.\s*B\.\s*U\.\s*H\.?(?=$|[^\p{L}])/giu, // P.B.U.H → ﷺ
 
-  /\bS\.\s*A\.\s*W\.?(?=$|[^\p{L}])/giu, // S.A.W → (ﷺ)
+  /\bS\s+A\s+W(?:\s+S)?(?=$|[^\p{L}])/gu, // S A W / S A W S → ﷺ
 
-  /\bP\.\s*B\.\s*U\.\s*H\.?(?=$|[^\p{L}])/giu, // P.B.U.H → (ﷺ)
+  /\bSAWS(?=$|[^\p{L}])/gu, // SAWS → ﷺ
 
-  /\bS\s+A\s+W(?:\s+S)?(?=$|[^\p{L}])/gu, // S A W / S A W S → (ﷺ)
+  /\bSAW(?=$|[^\p{L}])/gu, // SAW → ﷺ
 
-  /\bSAWS(?=$|[^\p{L}])/gu, // SAWS → (ﷺ)
+  /\bP\s+B\s+U\s+H(?=$|[^\p{L}])/gu, // P B U H → ﷺ
 
-  /\bSAW(?=$|[^\p{L}])/gu, // SAW → (ﷺ)
+  /\bPBUH(?=$|[^\p{L}])/gu, // PBUH → ﷺ
 
-  /\bP\s+B\s+U\s+H(?=$|[^\p{L}])/gu, // P B U H → (ﷺ)
+  /\bmay\s+peace\s+be\s+upon\s+him\b/giu, // May peace be upon him → ﷺ
 
-  /\bPBUH(?=$|[^\p{L}])/gu, // PBUH → (ﷺ)
+  /\bpeace\s+and\s+blessings\s+be\s+upon\s+him\b/giu, // Peace and blessings be upon him → ﷺ
 
-  /\bmay\s+peace\s+and\s+blessings\s+be\s+upon\s+him\b/giu, // May peace and blessings be upon him → (ﷺ)
-
-  /\bmay\s+peace\s+be\s+upon\s+him\b/giu, // May peace be upon him → (ﷺ)
-
-  /\bpeace\s+and\s+blessings\s+be\s+upon\s+him\b/giu, // Peace and blessings be upon him → (ﷺ)
-
-  /\bpeace\s+be\s+upon\s+him\b/giu, // Peace be upon him → (ﷺ)
+  /\bpeace\s+be\s+upon\s+him\b/giu, // Peace be upon him → ﷺ
 
 ];
 
@@ -278,50 +280,71 @@ export function convertToRomanEnglish(text: string): string {
 }
 
 // RA CONVERSION CATALOG — document each accepted source form and its output so
-// the supported variants remain visible when this list changes.
+// overlapping patterns and existing variants remain visible.
 //
-// RA source forms currently recognized:
-//   • RA / R.A / R.A.                                  → رضي الله عنه
-//   • (May Allah be pleased with Him)                 → (رضي اللّه عنه)
-//   • (May Allah be pleased with Her)                 → (رضي اللّه عنها)
-//   • (May Allah be pleased with them)                → (رضي اللّه عنهم)
-//   • , may Allah be pleased with Him/Her/them,       → رضي اللّه عنه/عنها/عنهم
-//   • may Allah be pleased with Him/Her/them           → رضي اللّه عنه/عنها/عنهم
-// These comma-delimited and bare forms intentionally collapse the punctuation
-// around the English salutation and leave exactly one space before the Arabic.
-// Keep this expression free of lookbehind. Obsidian runs plugins in mobile webviews,
-// and iOS versions below 16.4 do not support JavaScript regex lookbehind. The
-// leading capture preserves the same left-boundary behavior without requiring it.
-const STANDALONE_RA_PATTERN = /(^|[^A-Za-z0-9])R\.?A\.?(?![A-Za-z0-9])/giu;
+// Output policy: only the RA words are replaced, with the bare Arabic. Any
+// enclosure the source supplied is preserved, and parentheses are never added:
+//   RA / R.A / R.A.                            → رَضِيَ ٱللَّٰهُ عَنْهُ
+//   (RA) / (R.A.)                              → (رَضِيَ ٱللَّٰهُ عَنْهُ)
+//   May Allah be pleased with him              → رضي اللّه عنه
+//   (May Allah be pleased with Him)            → (رضي اللّه عنه)
+//   [May Allah be pleased with her]            → [رضي اللّه عنها]
+//   "May Allah be pleased with them"           → "رضي اللّه عنهم"
+// Existing Arabic RA text is left untouched.
+//
+// Comma-wrapped forms are the only exception (the same documented exception as
+// the salutation policy); they collapse their wrapping commas to one space:
+//   , may Allah be pleased with Him/Her/them[,] → رضي اللّه عنه/عنها/عنهم
+//
+// Bare forms match only the words, so surrounding whitespace and punctuation stay
+// exactly where the source put them. Keep this expression free of lookbehind.
+// Obsidian runs plugins in mobile webviews, and iOS versions below 16.4 do not
+// support JavaScript regex lookbehind. The leading capture preserves the same
+// left-boundary behavior without requiring it.
+const STANDALONE_RA_PATTERN = /(^|[^A-Za-z0-9])R\.?A\.?(?![.\p{L}\p{N}])/giu;
 
 const RA_ENGLISH_PATTERNS: readonly [RegExp,string][] = [
-  [/\(\s*May\s+Allah\s+be\s+pleased\s+with\s+Him\s*\)/giu, '(رضي اللّه عنه)'], // (May Allah be pleased with Him) → (رضي اللّه عنه)
+  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+Him(?:\s*,)?/giu, ' رضي اللّه عنه'], // , may Allah be pleased with Him[,] → رضي اللّه عنه
 
-  [/\(\s*May\s+Allah\s+be\s+pleased\s+with\s+Her\s*\)/giu, '(رضي اللّه عنها)'], // (May Allah be pleased with Her) → (رضي اللّه عنها)
+  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+Her(?:\s*,)?/giu, ' رضي اللّه عنها'], // , may Allah be pleased with Her[,] → رضي اللّه عنها
 
-  [/\(\s*May\s+Allah\s+be\s+pleased\s+with\s+them\s*\)/giu, '(رضي اللّه عنهم)'], // (May Allah be pleased with them) → (رضي اللّه عنهم)
+  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+them(?:\s*,)?/giu, ' رضي اللّه عنهم'], // , may Allah be pleased with them[,] → رضي اللّه عنهم
 
-  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+Him\s*,?/giu, ' رضي اللّه عنه'], // , may Allah be pleased with Him → رضي اللّه عنه
+  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+Him\b/giu, 'رضي اللّه عنه'], // May Allah be pleased with Him → رضي اللّه عنه
 
-  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+Her\s*,?/giu, ' رضي اللّه عنها'], // , may Allah be pleased with Her → رضي اللّه عنها
+  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+Her\b/giu, 'رضي اللّه عنها'], // May Allah be pleased with Her → رضي اللّه عنها
 
-  [/,\s*May\s+Allah\s+be\s+pleased\s+with\s+them\s*,?/giu, ' رضي اللّه عنهم'], // , may Allah be pleased with them → رضي اللّه عنهم
-
-  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+Him\s*,?/giu, 'رضي اللّه عنه'], // May Allah be pleased with Him → رضي اللّه عنه
-
-  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+Her\s*,?/giu, 'رضي اللّه عنها'], // May Allah be pleased with Her → رضي اللّه عنها
-
-  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+them\s*,?/giu, 'رضي اللّه عنهم'], // May Allah be pleased with them → رضي اللّه عنهم
+  [/\bMay\s+Allah\s+be\s+pleased\s+with\s+them\b/giu, 'رضي اللّه عنهم'], // May Allah be pleased with them → رضي اللّه عنهم
 
 ];
 
 // Public RA entry point. English honorific phrases are normalized to the Arabic
-// form while existing Arabic RA text remains stable. Both parenthesized and bare
-// forms are supported because user/source text commonly uses either style.
+// form while existing Arabic RA text remains stable. Source parentheses, brackets
+// and quotes are preserved because the patterns match only the words/phrase.
+function protectExistingRa(text: string): { text: string; tokens: string[] } {
+  const tokens: string[] = [];
+  const protectedText = text.replace(/\(\s*(?:رَضِيَ ٱللَّٰهُ عَنْهُ|رضي اللّه (?:عنه|عنها|عنهم))\s*\)|رَضِيَ ٱللَّٰهُ عَنْهُ|رضي اللّه (?:عنه|عنها|عنهم)/gu, (match) => {
+    const token = `QHFRATOKEN${tokens.length}X`;
+    tokens.push(match);
+    return token;
+  });
+  return { text: protectedText, tokens };
+}
+
+function restoreRa(text: string, tokens: readonly string[]): string {
+  return text.replace(/QHFRATOKEN(\d+)X/gu, (_, index: string) => tokens[Number(index)] ?? '');
+}
+
 export function normalizeStandaloneRa(text: string): string {
-  let out=text;
+  // Existing Arabic RA wording keeps its original spacing, matching the
+  // salutation policy for already-normalized text.
+  const protectedValue = protectExistingRa(text);
+  let out=protectedValue.text;
   for(const [pattern,replacement] of RA_ENGLISH_PATTERNS) out=out.replace(pattern,replacement);
-  return out.replace(STANDALONE_RA_PATTERN, (_match, prefix: string) => `${prefix}رَضِيَ ٱللَّٰهُ عَنْهُ`);
+  out=out.replace(STANDALONE_RA_PATTERN, (_match, prefix: string) => `${prefix}رَضِيَ ٱللَّٰهُ عَنْهُ`);
+  // Tidy spacing only inside parentheses that were already there.
+  out=out.replace(/\(\s*(رَضِيَ ٱللَّٰهُ عَنْهُ|رضي اللّه (?:عنه|عنها|عنهم))\s*\)/gu, '($1)');
+  return restoreRa(out, protectedValue.tokens);
 }
 
 export type CodeSyntaxMode = 'replace'|'remove'|'none';

@@ -4,6 +4,7 @@ import { QuranApiProvider } from '../../providers/quran-api/provider.js';
 import { HadithUnlockedProvider } from '../../providers/hadith-unlocked/provider.js';
 import { HadithApiProvider } from '../../providers/hadith-api/provider.js';
 import { HadithJsonProvider } from '../../providers/hadith-json/provider.js';
+import { AppError } from '../../core/errors.js';
 import type { HttpClient } from '../../core/http.js';
 import type { PersistentJsonStore } from '../../core/cache.js';
 import type { OfflineDatabaseDefinition, OfflineDatabaseStore, InstalledOfflineDatabase, OfflineInstallProgress } from '../../domain/offline.js';
@@ -141,6 +142,127 @@ test('Hadith Unlocked uses installed book data without pinging the hadith endpoi
   const result=await provider.fetchHadith({kind:'hadith',collectionId:'bukhari',hadithNumber:1},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()});
   assert.equal(result.arabic,'AR');
   assert.equal(result.english,'EN');
+});
+
+function installedBook(): unknown {
+  return {
+    format:'book-v44',
+    book:{alias:'adab',title:{en:'al-Adab al-Mufrad',ar:'الأدب المفرد'}},
+    chapters:[{
+      number:1,
+      title:{en:'Chapter',ar:'باب'},
+      sections:[
+        {number:1,title:{en:'One',ar:'١'},items:[
+          {id:11,ref:'adab:1',number:'1',title:{en:'First',ar:'الأول'},text:{en:'FIRST EN',ar:'FIRST AR'},chain:{en:'Chain one',ar:'سند واحد'},metadata:{grades:[{grade:'صحيح',grade_en:'Sound',grader:'الألباني',grader_en:'Al-Albani'}]}},
+        ]},
+        {number:2,title:{en:'Two',ar:'٢'},items:[
+          {id:12,ref:'adab:2',number:'2',title:{en:'Second',ar:'الثاني'},text:{en:'SECOND EN',ar:'SECOND AR'},chain:{en:'Chain two',ar:'سند اثنان'},metadata:{grades:[{grade:'حسن',grade_en:'Good',grader:'الألباني',grader_en:'Al-Albani'}]}},
+          {id:13,ref:'adab:3',number:'3',title:{en:'Third',ar:'الثالث'},text:{en:'THIRD EN',ar:'THIRD AR'},chain:{en:'Chain three',ar:'سند ثلاثة'},metadata:{grades:[]}},
+        ]},
+      ],
+    }],
+  };
+}
+
+test('Hadith Unlocked reads installed book-v44 data and selects the requested Hadith',async()=>{
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const offline=new FakeOfflineStore(new Map([['hadith-unlocked:adab:book',installedBook()]]));
+  const provider=new HadithUnlockedProvider(http,()=>false,offline);
+  const result=await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:2},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()});
+  assert.equal(result.arabic,'SECOND AR');
+  assert.equal(result.english,'SECOND EN');
+  assert.equal(result.arabicIsnad,'سند اثنان');
+  assert.equal(result.englishIsnad,'Chain two');
+  assert.equal(result.title,'Second');
+  assert.deepEqual(result.grades,[{id:'grade:al-albani\u0000good',text:'Good',author:'Al-Albani'}]);
+});
+
+test('Hadith Unlocked offline lookup fails loudly instead of returning the first Hadith',async()=>{
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const offline=new FakeOfflineStore(new Map([['hadith-unlocked:adab:book',installedBook()]]));
+  const provider=new HadithUnlockedProvider(http,()=>false,offline);
+  await assert.rejects(
+    () => provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:99},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()}),
+    (error: unknown) => error instanceof AppError && error.kind === 'parse' && /Hadith 99 was not found/u.test(error.message),
+  );
+});
+
+test('Hadith Unlocked resolves commentary collections by section number',async()=>{
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const offline=new FakeOfflineStore(new Map([['hadith-unlocked:ibnrajab50:book',{
+    format:'book-v44',
+    chapters:[{number:1,sections:[
+      {number:1,items:[
+        {id:1,number:'11',source:{ref:'bukhari:1',number:1},text:{en:'COMMENTARY ONE',ar:'الأول'}},
+        {id:2,number:'1-2',source:{ref:'muslim:1907a',number:'1907a'},text:{en:'COMMENTARY TWO',ar:'الثاني'}},
+      ]},
+      {number:2,items:[{id:3,number:'2',source:{ref:'muslim:8a',number:'8a'},text:{en:'COMMENTARY THREE',ar:'الثالث'}}]},
+    ]}],
+  }]]));
+  const provider=new HadithUnlockedProvider(http,()=>false,offline);
+  const first=await provider.fetchHadith({kind:'hadith',collectionId:'ibnrajab50',hadithNumber:1},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()});
+  assert.equal(first.english,'COMMENTARY ONE');
+  const second=await provider.fetchHadith({kind:'hadith',collectionId:'ibnrajab50',hadithNumber:2},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()});
+  assert.equal(second.english,'COMMENTARY THREE');
+});
+
+test('Hadith Unlocked offline range reads the installed book once',async()=>{
+  let reads=0;
+  const backing=new FakeOfflineStore(new Map([['hadith-unlocked:adab:book',installedBook()]]));
+  const offline:OfflineDatabaseStore={
+    listInstalled:()=>backing.listInstalled(),
+    getJson:async<T>(databaseId:string,partId:string)=>{reads++;return backing.getJson<T>(databaseId,partId);},
+    install:(definition,http,signal,onProgress)=>backing.install(definition,http,signal,onProgress),
+    remove:databaseId=>backing.remove(databaseId),
+  };
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const provider=new HadithUnlockedProvider(http,()=>false,offline);
+  const results=await provider.fetchHadithRange({kind:'hadith',collectionId:'adab',hadithNumber:1,endHadithNumber:3},{id:'en',language:'en',name:'English',providerId:'hadith-unlocked'},{signal:abortSignal()});
+  assert.deepEqual(results.map(result=>result.english),['FIRST EN','SECOND EN','THIRD EN']);
+  assert.equal(reads,1);
+});
+
+test('Hadith Unlocked caches the installed book across single fetches',async()=>{
+  let reads=0;
+  const backing=new FakeOfflineStore(new Map([['hadith-unlocked:adab:book',installedBook()]]));
+  const offline:OfflineDatabaseStore={
+    listInstalled:()=>backing.listInstalled(),
+    getJson:async<T>(databaseId:string,partId:string)=>{reads++;return backing.getJson<T>(databaseId,partId);},
+    install:(definition,http,signal,onProgress)=>backing.install(definition,http,signal,onProgress),
+    remove:databaseId=>backing.remove(databaseId),
+  };
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const provider=new HadithUnlockedProvider(http,()=>true,offline);
+  const translation={id:'en',language:'en',name:'English',providerId:'hadith-unlocked'};
+  const first=await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:1},translation,{signal:abortSignal()});
+  const second=await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:2},translation,{signal:abortSignal()});
+  const third=await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:2},translation,{signal:abortSignal()});
+  assert.equal(first.english,'FIRST EN');
+  assert.equal(second.english,'SECOND EN');
+  assert.equal(third.english,'SECOND EN');
+  assert.equal(reads,1);
+});
+
+test('Hadith Unlocked reloads the installed book when its revision changes',async()=>{
+  let reads=0;
+  let revision='install-1';
+  const backing=new FakeOfflineStore(new Map([['hadith-unlocked:adab:book',installedBook()]]));
+  const offline:OfflineDatabaseStore={
+    listInstalled:()=>backing.listInstalled(),
+    getJson:async<T>(databaseId:string,partId:string)=>{reads++;return backing.getJson<T>(databaseId,partId);},
+    revision:async()=>revision,
+    install:(definition,http,signal,onProgress)=>backing.install(definition,http,signal,onProgress),
+    remove:databaseId=>backing.remove(databaseId),
+  };
+  const http:HttpClient={getText:async()=>{throw new Error('network should not be used');},getJson:async()=>{throw new Error('network should not be used');}};
+  const provider=new HadithUnlockedProvider(http,()=>true,offline);
+  const translation={id:'en',language:'en',name:'English',providerId:'hadith-unlocked'};
+  await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:1},translation,{signal:abortSignal()});
+  await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:1},translation,{signal:abortSignal()});
+  assert.equal(reads,1);
+  revision='install-2';
+  await provider.fetchHadith({kind:'hadith',collectionId:'adab',hadithNumber:1},translation,{signal:abortSignal()});
+  assert.equal(reads,2);
 });
 
 test('Hadith API discovers all books exposed by its editions catalog',async()=>{

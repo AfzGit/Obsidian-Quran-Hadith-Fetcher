@@ -35,7 +35,7 @@ function safeDatabaseName(id: string): string { return encodeURIComponent(id); }
 
 
 async function sha256(text: string): Promise<string | undefined> {
-  const subtle = globalThis.crypto?.subtle;
+  const subtle = activeWindow.crypto?.subtle;
   if (!subtle) return undefined;
   const bytes = new TextEncoder().encode(text);
   const digest = await subtle.digest('SHA-256', bytes);
@@ -56,7 +56,7 @@ export class ObsidianOfflineDatabaseStore implements OfflineDatabaseStore {
   private readonly root: string;
 
   constructor(app: App, pluginId: string) {
-    this.adapter = app.vault.adapter as unknown as OfflineAdapter;
+    this.adapter = app.vault.adapter;
     this.root = normalizePath(`${app.vault.configDir}/plugins/${pluginId}/${DB_ROOT_NAME}`);
   }
 
@@ -102,7 +102,7 @@ export class ObsidianOfflineDatabaseStore implements OfflineDatabaseStore {
   private async tryRemovePath(path: string): Promise<boolean> {
     const delays = [0, 100, 250, 500, 1000, 2000, 4000];
     for (const delay of delays) {
-      if (delay) await new Promise<void>(resolve => setTimeout(resolve, delay));
+      if (delay) await new Promise<void>(resolve => window.setTimeout(resolve, delay));
       try {
         if (!(await this.adapter.exists(path))) return true;
         await this.adapter.remove(path, true);
@@ -192,6 +192,19 @@ export class ObsidianOfflineDatabaseStore implements OfflineDatabaseStore {
   }
 
   /**
+   * Report the identity of the installed copy without reading its data. Providers
+   * use this to keep a small parsed-book cache while still noticing reinstalls.
+   */
+  async revision(databaseId: string): Promise<string | null> {
+    try {
+      const manifest = await this.readManifest(databaseId);
+      return manifest ? `${manifest.installedAt}:${manifest.sizeBytes}` : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Install an offline database through the transactional install path. A per-ID
    * promise lock deduplicates concurrent installs, preventing two UI actions from
    * writing competing partial copies of the same database.
@@ -218,10 +231,10 @@ export class ObsidianOfflineDatabaseStore implements OfflineDatabaseStore {
     const delays=[0,100,250,500,1000,2000,4000];
     let lastError:unknown;
     for(const delay of delays){
-      if(delay) await new Promise<void>(resolve=>setTimeout(resolve,delay));
+      if(delay) await new Promise<void>(resolve=>window.setTimeout(resolve,delay));
       try{ await this.adapter.rename(oldPath,newPath); return; }catch(error){ lastError=error; }
     }
-    const detail=lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown error');
+    const detail=lastError instanceof Error ? lastError.message : 'unknown error';
     throw new AppError(`The offline database is currently in use and cannot be replaced. Close any process using its files and try again. (${detail})`,'unknown',undefined,{cause:lastError});
   }
 

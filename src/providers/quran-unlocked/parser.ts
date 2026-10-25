@@ -38,7 +38,7 @@ function cleanEnglishTranslation(value: string): string {
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '\"')
+    .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
@@ -55,8 +55,8 @@ function capitalizeSurahName(value: string): string {
 }
 
 function extractItems(raw: unknown): QuranUnlockedItem[] {
-  if (Array.isArray(raw)) return raw.filter(isRecord) as QuranUnlockedItem[];
-  if (isRecord(raw) && Array.isArray(raw.result)) return raw.result.filter(isRecord) as QuranUnlockedItem[];
+  if (Array.isArray(raw)) return raw.filter(isRecord);
+  if (isRecord(raw) && Array.isArray(raw.result)) return raw.result.filter(isRecord);
   return [];
 }
 

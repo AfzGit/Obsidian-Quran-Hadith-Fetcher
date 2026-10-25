@@ -1,4 +1,5 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import type { SettingDefinitionItem } from 'obsidian';
 import type { ProviderHealth } from '../domain/provider';
 import type { Settings } from '../settings/model';
 import type { ReplacementRule } from '../core/normalization';
@@ -13,6 +14,8 @@ import { COMMAND_DEFINITIONS } from '../core/commands';
 const QURAN_PROVIDERS = {'alquran-cloud':'Al Quran Cloud','quran-unlocked':'Quran Unlocked','quran-api':'Quran API','quran-project':'Quran Project API'};
 const HADITH_PROVIDERS = {'hadith-api':'hadith-api','hadith-unlocked':'Hadith Unlocked','hadith-json':'Hadith JSON'};
 
+// Declarative settings require the Obsidian 1.13 API; minAppVersion is 1.9.0, so
+// the imperative display() path remains the single source of truth for now.
 export class FetcherSettingTab extends PluginSettingTab {
   private displayToken=0;
   private pendingScrollPosition:{top:number;left:number}|undefined;
@@ -42,6 +45,21 @@ export class FetcherSettingTab extends PluginSettingTab {
    * settings page.
    */
   override display():void {
+    this.renderAll();
+  }
+
+  /**
+   * Obsidian 1.13 uses getSettingDefinitions() for settings search. This plugin still
+   * supports Obsidian 1.9, where display() is the only available renderer, and several
+   * controls load provider data asynchronously or use custom rule editors. Returning
+   * an empty definition list keeps display() active on every supported version until
+   * the declarative migration can cover the whole tab.
+   */
+  override getSettingDefinitions():SettingDefinitionItem[] {
+    return [];
+  }
+
+  private renderAll():void {
     const token=++this.displayToken;
     const {containerEl}=this;
     containerEl.empty();
@@ -62,9 +80,9 @@ export class FetcherSettingTab extends PluginSettingTab {
         host.scrollTop=pending.top;
         host.scrollLeft=pending.left;
       };
-      requestAnimationFrame(()=>{
+      window.requestAnimationFrame(()=>{
         restore();
-        requestAnimationFrame(()=>restore());
+        window.requestAnimationFrame(()=>restore());
       });
       window.setTimeout(()=>{
         restore();
@@ -76,7 +94,7 @@ export class FetcherSettingTab extends PluginSettingTab {
   private renderSectionHeading(containerEl:HTMLElement,text:string,description:string):void {
     const heading=containerEl.createDiv({cls:'qhf-settings-section-heading'});
     new Setting(heading).setName(text).setHeading();
-    if(description) heading.createEl('div',{text:description,cls:'qhf-settings-section-description'});
+    if(description) heading.createDiv({text:description,cls:'qhf-settings-section-description'});
   }
 
   private renderProvidersSection(containerEl:HTMLElement,token:number):void {
@@ -93,7 +111,7 @@ export class FetcherSettingTab extends PluginSettingTab {
           else if(v==='quran-api'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='eng-muhammadtaqiudd'; }
           else if(v==='quran-project'){ this.plugin.pluginSettings.quranLanguage='en'; this.plugin.pluginSettings.quranTranslation='en'; }
           await this.plugin.saveSettings();
-          this.display();
+          this.renderAll();
         }));
     void this.renderQuranTranslationSelectors(containerEl,this.plugin.pluginSettings.quranProvider,token);
 
@@ -105,7 +123,7 @@ export class FetcherSettingTab extends PluginSettingTab {
         .onChange(async v=>{
           this.plugin.pluginSettings.quranWebsite=v as Settings['quranWebsite'];
           await this.plugin.saveSettings();
-          this.display();
+          this.renderAll();
         }));
 
     if(this.plugin.pluginSettings.quranWebsite==='custom'){
@@ -145,7 +163,7 @@ export class FetcherSettingTab extends PluginSettingTab {
             this.plugin.pluginSettings.hadithTranslation='en';
           }
           await this.plugin.saveSettings();
-          this.display();
+          this.renderAll();
         }));
     void this.renderHadithTranslationSelector(containerEl,this.plugin.pluginSettings.hadithProvider,token);
 
@@ -200,7 +218,7 @@ export class FetcherSettingTab extends PluginSettingTab {
       .addButton(b=>b.setButtonText('Configure').onClick(()=>{
         const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.plugin.pluginSettings.commandVisibility[command.id] !== false}));
         new CommandVisibilityModal(this.app,items,async enabled=>{
-          this.plugin.pluginSettings.commandVisibility={...this.plugin.pluginSettings.commandVisibility,...enabled} as Settings['commandVisibility'];
+          this.plugin.pluginSettings.commandVisibility={...this.plugin.pluginSettings.commandVisibility,...enabled};
           await this.plugin.saveSettings();
         }).open();
       }));
@@ -380,7 +398,7 @@ export class FetcherSettingTab extends PluginSettingTab {
     }).setValue(this.plugin.pluginSettings.formatting.callout).onChange(async v=>{
       this.plugin.pluginSettings.formatting.callout=v as Settings['formatting']['callout'];
       await this.plugin.saveSettings();
-      this.display();
+      this.renderAll();
     }));
     if(this.plugin.pluginSettings.formatting.callout==='custom'){
       new Setting(containerEl).setName('Custom callout type').setDesc('Enter the Obsidian callout type used when Callout style is Custom. Enter the type only, without the [!] marker; for example, my-callout.').addText(t=>t.setValue(this.plugin.pluginSettings.formatting.customCalloutType).onChange(async v=>{
@@ -412,7 +430,7 @@ export class FetcherSettingTab extends PluginSettingTab {
           (this.plugin.pluginSettings.formatting as unknown as Record<string,unknown>)[closeKey]=close;
         }
         await this.plugin.saveSettings();
-        this.display();
+        this.renderAll();
       }));
 
     if(current==='custom'){
@@ -428,7 +446,7 @@ export class FetcherSettingTab extends PluginSettingTab {
   }
 
   private getSettingsScrollHost():HTMLElement {
-    const verticalTabContent=this.containerEl.closest('.vertical-tab-content') as HTMLElement | null;
+    const verticalTabContent=this.containerEl.closest<HTMLElement>('.vertical-tab-content');
     if(verticalTabContent) return verticalTabContent;
 
     const candidates=this.getSettingsScrollElements();
@@ -489,9 +507,9 @@ export class FetcherSettingTab extends PluginSettingTab {
     restore();
     return Promise.resolve(action()).finally(()=>{
       restore();
-      requestAnimationFrame(()=>{
+      window.requestAnimationFrame(()=>{
         restore();
-        requestAnimationFrame(()=>{
+        window.requestAnimationFrame(()=>{
           restore();
           window.setTimeout(restore,50);
           window.setTimeout(restore,200);
@@ -513,7 +531,7 @@ export class FetcherSettingTab extends PluginSettingTab {
     const positions=this.captureSettingsScroll();
     const first=positions[0];
     this.pendingScrollPosition=first ? {top:first.top,left:first.left} : undefined;
-    this.display();
+    this.renderAll();
   }
 
   private renderTextConversionSection(containerEl:HTMLElement):void {
@@ -539,7 +557,7 @@ export class FetcherSettingTab extends PluginSettingTab {
 
     const blessingSetting=new Setting(controls)
       .setName('Normalize salutations to ﷺ')
-      .setDesc('Convert common salutation variants to ﷺ. Examples: SAW, S.A.W., S.A.W.S., and P.B.U.H. → (ﷺ); (O Muhammad SAW) → (O Muhammad ﷺ); may peace and blessings be upon him → ﷺ; Prophet, may Allah bless him and grant him peace → Prophet ﷺ; صلى الله عليه وسلم → ﷺ. Existing ﷺ and source parentheses are preserved.')
+      .setDesc('Convert common salutation variants to ﷺ. Examples: SAW, S.A.W., S.A.W.S., and P.B.U.H. → ﷺ; (O Muhammad SAW) → (O Muhammad ﷺ); may peace and blessings be upon him → ﷺ; Prophet, may Allah bless him and grant him peace → Prophet ﷺ; صلى الله عليه وسلم → ﷺ. Only the salutation words are replaced, so source parentheses and other enclosures are preserved and no new parentheses are added.')
       .addToggle(t=>t.setValue(this.plugin.pluginSettings.blessingNormalization).onChange(async v=>{
         this.plugin.pluginSettings.blessingNormalization=v;
         await this.plugin.saveSettings();
@@ -548,7 +566,7 @@ export class FetcherSettingTab extends PluginSettingTab {
 
     new Setting(controls)
       .setName('Convert Variants of RA used for the Sahaba to رَضِيَ اللهُ عَنْهُ')
-      .setDesc('Convert English and abbreviated variants of the Sahaba honorific to Arabic. Examples: RA, R.A., R.A. → رضي اللّه عنه; (May Allah be pleased with Him) → (رضي اللّه عنه); (May Allah be pleased with Her) → (رضي اللّه عنها); (May Allah be pleased with them) → (رضي اللّه عنهم); may Allah be pleased with them → رضي اللّه عنهم; and comma forms such as “Jabir, may Allah be pleased with them,” → “Jabir رضي اللّه عنهم”.')
+      .setDesc('Convert English and abbreviated variants of the Sahaba honorific to Arabic. Examples: RA, R.A., R.A. → رَضِيَ ٱللَّٰهُ عَنْهُ; (May Allah be pleased with Him) → (رضي اللّه عنه); (May Allah be pleased with Her) → (رضي اللّه عنها); (May Allah be pleased with them) → (رضي اللّه عنهم); may Allah be pleased with them → رضي اللّه عنهم; and comma forms such as “Jabir, may Allah be pleased with them,” → “Jabir رضي اللّه عنهم”. Only the RA words are replaced, so source parentheses and other enclosures are preserved and no new parentheses are added.')
       .addToggle(t=>t.setValue(this.plugin.pluginSettings.raNormalization).onChange(async v=>{
         this.plugin.pluginSettings.raNormalization=v;
         await this.plugin.saveSettings();
@@ -592,12 +610,12 @@ export class FetcherSettingTab extends PluginSettingTab {
   private renderReplacementRule(containerEl:HTMLElement,rule:ReplacementRule,conversionsEnabled=true):void{
     const card=containerEl.createDiv({cls:'qhf-replacement-rule'});
     card.toggleClass('qhf-replacement-disabled',!rule.enabled);
-    card.createEl('div',{text:rule.title || 'Text conversion',cls:'qhf-replacement-title'});
-    if(rule.description.trim()) card.createEl('div',{text:rule.description,cls:'qhf-replacement-description'});
+    card.createDiv({text:rule.title || 'Text conversion',cls:'qhf-replacement-title'});
+    if(rule.description.trim()) card.createDiv({text:rule.description,cls:'qhf-replacement-description'});
     const row=card.createDiv({cls:'qhf-replacement-summary'});
-    row.createEl('span',{text:rule.from || '—',cls:'qhf-replacement-term'});
-    row.createEl('span',{text:'→',cls:'qhf-replacement-arrow'});
-    row.createEl('span',{text:rule.to || '—',cls:'qhf-replacement-term'});
+    row.createSpan({text:rule.from || '—',cls:'qhf-replacement-term'});
+    row.createSpan({text:'→',cls:'qhf-replacement-arrow'});
+    row.createSpan({text:rule.to || '—',cls:'qhf-replacement-term'});
     const edit=row.createEl('button',{text:'Edit',cls:'qhf-replacement-edit',attr:{
       type:'button',
       'aria-label':'Edit conversion',
@@ -632,10 +650,10 @@ export class FetcherSettingTab extends PluginSettingTab {
       track.createSpan({cls:'qhf-conversion-toggle-thumb'});
       card.toggleClass('qhf-replacement-disabled',!rule.enabled);
     };
-    toggle.addEventListener('click',async()=>{
+    toggle.addEventListener('click',()=>{
       rule.enabled=!rule.enabled;
       syncToggle();
-      await this.plugin.saveSettings();
+      void this.plugin.saveSettings();
     });
     syncToggle();
   }

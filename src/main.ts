@@ -102,7 +102,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
   openCommandPaletteSettings():void {
     const items=COMMAND_DEFINITIONS.map(command=>({id:command.id,name:command.name,enabled:this.pluginSettings.commandVisibility[command.id] !== false}));
     new CommandVisibilityModal(this.app,items,async enabled=>{
-      this.pluginSettings.commandVisibility={...this.pluginSettings.commandVisibility,...enabled} as Settings['commandVisibility'];
+      this.pluginSettings.commandVisibility={...this.pluginSettings.commandVisibility,...enabled};
       await this.saveSettings();
     }).open();
   }
@@ -232,7 +232,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     const items:Array<{id:Settings['quranWebsite'];label:string}>=Object.entries(QURAN_WEBSITES).map(([id,label])=>({id:id as Settings['quranWebsite'],label}));
     items.push({id:'custom',label:'Custom'});
     new ChoiceModal(this.app,items,item=>item.id==='custom' ? 'Custom' : item.label,async item=>{
-      if(item.id!=='custom'){this.pluginSettings.quranWebsite=item.id as Settings['quranWebsite'];await this.saveSettings();return;}
+      if(item.id!=='custom'){this.pluginSettings.quranWebsite=item.id;await this.saveSettings();return;}
       new InputModal(this.app,'Custom Quran URL','e.g. https://example.com/$surah/$ayah',this.pluginSettings.customQuranUrl,async value=>{this.pluginSettings.quranWebsite='custom';this.pluginSettings.customQuranUrl=value;await this.saveSettings();},()=>{},value=>{const invalid=validateTemplate(value);return value.includes('$surah') ? (invalid.length ? `Unknown URL placeholder(s): ${invalid.join(', ')}` : null) : 'URL template must contain $surah.';},'text').open();
     },'Select Quran website').open();
   }

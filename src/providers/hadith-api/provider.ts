@@ -45,8 +45,8 @@ export class HadithApiProvider implements HadithProvider {
         const book=value as Record<string,unknown>;
         const collection=Array.isArray(book.collection) ? book.collection : [];
         const editions=collection.filter(item=>item && typeof item==='object') as Record<string,unknown>[];
-        const arabic=editions.find(item=>typeof item.name==='string' && /^Arabic$/iu.test(String(item.language ?? '')));
-        const english=editions.find(item=>typeof item.name==='string' && /^English$/iu.test(String(item.language ?? '')));
+        const arabic=editions.find(item=>typeof item.name==='string' && typeof item.language==='string' && /^Arabic$/iu.test(item.language));
+        const english=editions.find(item=>typeof item.name==='string' && typeof item.language==='string' && /^English$/iu.test(item.language));
         const fallback=fallbackById.get(bookId);
         const name=typeof book.name==='string' && book.name.trim() ? book.name.trim() : fallback?.name;
         if(!name) continue;
@@ -201,7 +201,7 @@ export class HadithApiProvider implements HadithProvider {
         }
       }
     }
-    if(lastError) throw lastError;
+    if(lastError) throw lastError instanceof Error ? lastError : new AppError('Hadith API could not return the requested Hadith.','network');
     throw new AppError('Hadith API could not return the requested Hadith.','network');
   }
 

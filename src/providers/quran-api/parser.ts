@@ -40,7 +40,7 @@ function collect(value: unknown, out: VerseLike[]): void {
   const r = record(value);
   if (!r) return;
   const text = typeof r.text === 'string' ? r.text : undefined;
-  if (text) out.push(r as VerseLike);
+  if (text) out.push(r);
   for (const key of ['data', 'quran', 'chapter', 'ayahs', 'verses', 'items', 'result']) {
     if (key in r) collect(r[key], out);
   }

@@ -44,6 +44,13 @@ export interface OfflineInstallProgress {
 export interface OfflineDatabaseStore {
   listInstalled(): Promise<InstalledOfflineDatabase[]>;
   getJson<T>(databaseId: string, partId: string): Promise<T | null>;
+  /**
+   * Cheap identity for the installed copy of a database. Implementations return a
+   * value that changes whenever the database is reinstalled, or `null` when it is
+   * not installed. Optional so lightweight/test stores stay simple; `undefined`
+   * means the caller cannot detect replacements.
+   */
+  revision?(databaseId: string): Promise<string | null>;
   install(
     definition: OfflineDatabaseDefinition,
     http: HttpClient,

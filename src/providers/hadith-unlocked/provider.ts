@@ -17,6 +17,8 @@ export class HadithUnlockedProvider implements HadithProvider {
   readonly capabilities: ProviderCapabilities = { arabicText:true, englishTranslation:true, multipleTranslations:false, collectionListing:true, rangeRetrieval:true, grading:true, metadata:true, directSourceUrls:true, search:true };
   private readonly cache = new MemoryCacheStore();
   private readonly hadithLoads = new SingleFlight<HadithResult>();
+  private readonly installedBooks = new Map<string, { revision: string | null | undefined; data: unknown }>();
+  private readonly maxMemoryBooks = 2;
   private collectionsCache: CollectionDefinition[] | null = null;
   constructor(private readonly http: HttpClient, private readonly cacheEnabled: () => boolean = () => true, private readonly offline?: OfflineDatabaseStore) {}
 
@@ -31,6 +33,58 @@ export class HadithUnlockedProvider implements HadithProvider {
   }
 
 
+  /**
+   * Read an installed book through a small LRU cache. Parsing a complete Hadith
+   * Unlocked book is the expensive part of an offline lookup, so repeated single
+   * fetches keep the parsed book in memory. `revision()` invalidates the entry when
+   * the database is reinstalled or removed; stores without it keep the entry for
+   * the session.
+   */
+  private async loadInstalledBook(collectionId: string): Promise<unknown> {
+    const store = this.offline;
+    if (!store) return null;
+    const databaseId = `hadith-unlocked:${collectionId}`;
+    const caching = this.cacheEnabled();
+    const revision = caching && store.revision ? await store.revision(databaseId) : undefined;
+    if (!caching) {
+      this.installedBooks.clear();
+      const data = await store.getJson<unknown>(databaseId, 'book');
+      return data ?? null;
+    }
+    const cached = this.installedBooks.get(collectionId);
+    if (cached && (revision === undefined || cached.revision === revision)) {
+      // Touch the entry so the bounded map behaves as an LRU.
+      this.installedBooks.delete(collectionId);
+      this.installedBooks.set(collectionId, cached);
+      return cached.data;
+    }
+    if (revision === null) {
+      this.installedBooks.delete(collectionId);
+      return null;
+    }
+    const data = await store.getJson<unknown>(databaseId, 'book');
+    if (data === null || data === undefined) {
+      this.installedBooks.delete(collectionId);
+      return null;
+    }
+    this.installedBooks.set(collectionId, { revision, data });
+    while (this.installedBooks.size > this.maxMemoryBooks) {
+      const oldest = this.installedBooks.keys().next().value;
+      if (oldest === undefined) break;
+      this.installedBooks.delete(oldest);
+    }
+    return data;
+  }
+
+  private parseInstalled(raw: unknown, reference: HadithReference, collection: CollectionDefinition): HadithResult {
+    const pageUrl = `${this.metadata.baseUrl}/${reference.collectionId}:${reference.hadithNumber}`;
+    const result = parseHadithUnlockedResponse(raw, reference, collection, pageUrl);
+    if (!result.arabic && !result.english) {
+      throw new AppError(`Hadith ${reference.hadithNumber} was not found in the installed ${collection.name} offline database.`, 'parse');
+    }
+    return result;
+  }
+
   async fetchHadith(reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult> {
     const key = makeCacheKey({ provider: this.metadata.id, collection: reference.collectionId, hadith: reference.hadithNumber, translation: translation.id });
     return this.hadithLoads.run(key, async()=>{
@@ -40,9 +94,8 @@ export class HadithUnlockedProvider implements HadithProvider {
       if(translation.providerId!==this.metadata.id || translation.id!=='en') throw new AppError('Translation is not supported by Hadith Unlocked.','validation');
 
       const pageUrl = `${this.metadata.baseUrl}/${reference.collectionId}:${reference.hadithNumber}`;
-      const offline = await this.offline?.getJson<unknown>(`hadith-unlocked:${collection.id}`,'book');
-      if(offline!==null&&offline!==undefined) return parseHadithUnlockedResponse(offline,reference,collection,pageUrl);
-
+      const offline = await this.loadInstalledBook(collection.id);
+      if(offline!==null&&offline!==undefined) return this.parseInstalled(offline, reference, collection);
       if (this.cacheEnabled()) {
         const cached = await this.cache.get<HadithResult>(key);
         if (cached) return structuredClone(cached.value);
@@ -60,6 +113,21 @@ export class HadithUnlockedProvider implements HadithProvider {
     if (typeof reference.hadithNumber !== 'number' || typeof end !== 'number') {
       throw new AppError('Alphabetic Hadith ranges are not supported.','validation');
     }
+    const collection = (await this.listCollections(ctx)).find(x => x.id === reference.collectionId);
+    if (!collection) throw new AppError('Unknown collection.', 'validation');
+    if (translation.providerId!==this.metadata.id || translation.id!=='en') throw new AppError('Translation is not supported by Hadith Unlocked.','validation');
+
+    // An installed book already contains every Hadith. Reading it once keeps a
+    // range from re-reading and re-parsing the same large file per number.
+    const offline = await this.loadInstalledBook(collection.id);
+    if (offline !== null && offline !== undefined) {
+      const results: HadithResult[] = [];
+      for (let hadithNumber = reference.hadithNumber; hadithNumber <= end; hadithNumber++) {
+        results.push(this.parseInstalled(offline, {kind:'hadith',collectionId:reference.collectionId,hadithNumber}, collection));
+      }
+      return results;
+    }
+
     const results: HadithResult[] = [];
     const concurrency = 4;
     for (let start = reference.hadithNumber; start <= end; start += concurrency) {

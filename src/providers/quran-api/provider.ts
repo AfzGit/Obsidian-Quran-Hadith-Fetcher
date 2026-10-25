@@ -14,10 +14,6 @@ const EDITIONS_URL = `${BASE}/editions.min.json`;
 const ARABIC_EDITION = 'ara-quranacademy';
 
 interface EditionMeta { name?: string; author?: string; language?: string; link?: string; linkmin?: string; }
-const DEFAULT_HILALI: TranslationDefinition = normalizeQuranTranslationMetadata({
-  id:'eng-muhammadtaqiudd', language:'en', name:'Hilali-Khan',
-  author:'Muhammad Taqi Ud Din Al Hilali And Muhammad Muhsin Khan', providerId:'quran-api',
-});
 interface CachedAyah { surahName:string; ayah:Ayah; }
 function mergeCached(base:CachedAyah|undefined,extra:CachedAyah):CachedAyah {
   if(!base) return structuredClone(extra);

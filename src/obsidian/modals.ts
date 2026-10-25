@@ -34,7 +34,7 @@ function decodeHtmlEntities(value:string):string {
 export class InputModal extends Modal {
   private input!: HTMLInputElement;
   private errorEl!: HTMLElement;
-  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string)=>void, private readonly onCancel:()=>void, private readonly validateInput?:(value:string)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric', private readonly inputType:HTMLInputElement['type']='text'){ super(app); }
+  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string)=>void|Promise<void>, private readonly onCancel:()=>void, private readonly validateInput?:(value:string)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric', private readonly inputType:HTMLInputElement['type']='text'){ super(app); }
   override onOpen():void {
     this.contentEl.empty();
     this.titleEl.setText(this.title);
@@ -51,11 +51,11 @@ export class InputModal extends Modal {
       this.input.removeAttribute('aria-invalid');
       this.errorEl.empty();
       this.close();
-      this.onSubmit(value);
+      void this.onSubmit(value);
     };
     submit.onclick=submitValue;
     this.input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();submitValue();}if(e.key==='Escape'){this.close();this.onCancel();}});
-    setTimeout(()=>this.input.focus(),0);
+    window.setTimeout(()=>this.input.focus(),0);
   }
   override onClose():void { this.contentEl.empty(); }
 }
@@ -96,10 +96,10 @@ export class CommandVisibilityModal extends Modal {
 }
 
 export class QuranSurahModal extends FuzzySuggestModal<{number:number;name:string}> {
-  constructor(app:App, private readonly onChoose:(surah:number)=>void){ super(app); this.setPlaceholder('Search surah…'); }
+  constructor(app:App, private readonly onChoose:(surah:number)=>void|Promise<void>){ super(app); this.setPlaceholder('Search surah…'); }
   override getItems(){return SURAH_NAMES.map((name,i)=>({number:i+1,name}));}
   override getItemText(item:{number:number;name:string}){return `${String(item.number).padStart(3,'0')} ${item.name}`;}
-  override onChooseItem(item:{number:number;name:string}){this.close();this.onChoose(item.number);}
+  override onChooseItem(item:{number:number;name:string}){this.close();void this.onChoose(item.number);}
 }
 
 export class CollectionModal extends FuzzySuggestModal<CollectionDefinition> {
@@ -188,7 +188,7 @@ export class OptionsModal extends Modal {
         e.preventDefault(); e.stopPropagation(); void submitOptions();
       }
     },true);
-    setTimeout(()=>submit.focus(),0);
+    window.setTimeout(()=>submit.focus(),0);
   }
 }
 
@@ -212,7 +212,7 @@ export class ReplacementRuleModal extends Modal {
     if(!textConversionsEnabled){
       const warning=this.contentEl.createDiv({cls:'qhf-text-conversion-warning mod-warning',attr:{role:'alert'}});
       warning.createEl('strong',{text:'Text conversions are currently disabled.'});
-      warning.createEl('div',{text:'Changes made here will still be saved, but they will not be applied to fetched text until Text Conversions is enabled in settings.'});
+      warning.createDiv({text:'Changes made here will still be saved, but they will not be applied to fetched text until Text Conversions is enabled in settings.'});
     }
     const draft:ReplacementRule={...this.rule};
 
@@ -255,33 +255,20 @@ export class PreviewModal extends Modal {
     const row=this.contentEl.createDiv({cls:'qhf-modal-actions'});
     if(this.onBack) row.createEl('button',{text:'Back'}).onclick=()=>{this.close();this.onBack?.();};
     row.createEl('button',{text:'Cancel'}).onclick=()=>this.close();
-    row.createEl('button',{text:'Copy'}).onclick=async()=>{
-      try{
-        // Clipboard.writeText is the cross-platform Web API recommended by Obsidian.
-        // It can be unavailable or restricted by a particular mobile webview, so keep
-        // the older selection-based fallback for environments where direct clipboard
-        // access is not exposed. The button click supplies the user gesture required
-        // by mobile browsers for clipboard writes.
-        if(navigator.clipboard?.writeText){
-          await navigator.clipboard.writeText(this.textarea.value);
-        } else {
-          this.textarea.focus();
-          this.textarea.select();
-          if(!document.execCommand('copy')) throw new Error('Clipboard copy is unavailable.');
-        }
-        this.close();
-        new Notice('Copied to clipboard.');
-      }catch{
+    row.createEl('button',{text:'Copy'}).onclick=()=>{
+      void (async()=>{
         try{
-          this.textarea.focus();
-          this.textarea.select();
-          if(!document.execCommand('copy')) throw new Error('Clipboard copy is unavailable.');
+          // Clipboard.writeText is the cross-platform Web API recommended by
+          // Obsidian. The preview opens from a button click, which supplies the
+          // user gesture mobile browsers require for clipboard writes.
+          if(!navigator.clipboard?.writeText) throw new Error('Clipboard copy is unavailable.');
+          await navigator.clipboard.writeText(this.textarea.value);
           this.close();
           new Notice('Copied to clipboard.');
         }catch{
           new Notice('Could not copy to clipboard.');
         }
-      }
+      })();
     };
     this.insertButton=row.createEl('button',{text:'Insert',cls:'mod-cta'});
     this.insertButton.onclick=()=>{const value=this.textarea.value;this.close();this.onInsert(value);};
@@ -293,11 +280,11 @@ export class PreviewModal extends Modal {
       this.textarea.blur();
       this.insertButton.focus({preventScroll:true});
     };
-    requestAnimationFrame(()=>{
+    window.requestAnimationFrame(()=>{
       focusInsertButton();
-      requestAnimationFrame(focusInsertButton);
+      window.requestAnimationFrame(focusInsertButton);
     });
-    setTimeout(focusInsertButton,50);
+    window.setTimeout(focusInsertButton,50);
   }
   override onClose(){this.modalEl.removeClass('qhf-preview-modal');this.contentEl.empty();}
 }
@@ -367,7 +354,7 @@ export class OfflineDatabaseModal extends Modal {
     this.statusEl=this.contentEl.createDiv({cls:'qhf-offline-status'});
     this.listEl=this.contentEl.createDiv({cls:'qhf-offline-list'});
     this.render();
-    setTimeout(()=>this.searchInput.focus(),0);
+    window.setTimeout(()=>this.searchInput.focus(),0);
   }
 
   private createFilterButton(parent:HTMLElement,label:string,onClick:()=>void,isActive:()=>boolean):HTMLButtonElement {
@@ -422,9 +409,9 @@ export class OfflineDatabaseModal extends Modal {
     for(const provider of emptyProviders){
       const row=this.listEl.createDiv({cls:'qhf-offline-row qhf-offline-unavailable'});
       const info=row.createDiv({cls:'qhf-offline-info'});
-      info.createEl('div',{text:provider.name,cls:'qhf-offline-label'});
-      info.createEl('div',{text:'No downloadable offline database is currently implemented for this provider.',cls:'qhf-offline-description'});
-      info.createEl('div',{text:provider.id,cls:'qhf-offline-provider'});
+      info.createDiv({text:provider.name,cls:'qhf-offline-label'});
+      info.createDiv({text:'No downloadable offline database is currently implemented for this provider.',cls:'qhf-offline-description'});
+      info.createDiv({text:provider.id,cls:'qhf-offline-provider'});
     }
 
     if(!visible.length && !emptyProviders.length){
@@ -435,9 +422,9 @@ export class OfflineDatabaseModal extends Modal {
     for(const definition of visible){
       const row=this.listEl.createDiv({cls:'qhf-offline-row'});
       const info=row.createDiv({cls:'qhf-offline-info'});
-      info.createEl('div',{text:definition.label,cls:'qhf-offline-label'});
-      info.createEl('div',{text:definition.description,cls:'qhf-offline-description'});
-      info.createEl('div',{text:definition.providerId,cls:'qhf-offline-provider'});
+      info.createDiv({text:definition.label,cls:'qhf-offline-label'});
+      info.createDiv({text:definition.description,cls:'qhf-offline-description'});
+      info.createDiv({text:definition.providerId,cls:'qhf-offline-provider'});
       if(this.states.has(definition.id)){
         if(definition.parts.length){
           const reinstall=row.createEl('button',{text:'Reinstall'});

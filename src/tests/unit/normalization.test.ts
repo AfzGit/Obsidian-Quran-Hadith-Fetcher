@@ -3,15 +3,15 @@ import test from 'node:test';
 import { normalizeBlessing, normalizeArabicBlessing, normalizeStandaloneRa, applyEnglishReplacements, transformFetchedEnglishText, transformFetchedArabicText, convertToRomanEnglish, modifyCodeSyntax, DEFAULT_REPLACEMENT_RULES } from '../../core/normalization';
 
 
-test('English blessing variants normalize to (ﷺ)',()=>{
+test('English blessing variants normalize to ﷺ',()=>{
   const samples=['SAW','S.A.W.','S A W','SAWS','S.A.W.S.','PBUH','P.B.U.H.','P B U H','peace be upon him','Peace be upon him','peace and blessings be upon him','Peace and blessings be upon him'];
-  for(const sample of samples)assert.equal(normalizeBlessing(sample),'(ﷺ)',sample);
+  for(const sample of samples)assert.equal(normalizeBlessing(sample),'ﷺ',sample);
 });
 
 test('may peace and blessings phrasing is replaced as one complete salutation',()=>{
   assert.equal(normalizeBlessing('And he May peace and blessings be upon him and he'), 'And he ﷺ and he');
   assert.equal(normalizeBlessing('And he (may peace and blessings be upon him) and he'), 'And he (ﷺ) and he');
-  assert.equal(normalizeBlessing('And he May peace be upon him and he'), 'And he (ﷺ) and he');
+  assert.equal(normalizeBlessing('And he May peace be upon him and he'), 'And he ﷺ and he');
 });
 
 test('Arabic normalizer preserves existing blessing forms',()=>{
@@ -34,8 +34,22 @@ test('blessing normalization is idempotent',()=>{
 
 test('English SAW respects surrounding parentheses',()=>{
   assert.equal(normalizeBlessing('(O Muhammad SAW)'), '(O Muhammad ﷺ)');
-  assert.equal(normalizeBlessing('O Muhammad SAW'), 'O Muhammad (ﷺ)');
+  assert.equal(normalizeBlessing('O Muhammad SAW'), 'O Muhammad ﷺ');
   assert.equal(normalizeBlessing('O Muhammad (ﷺ)'), 'O Muhammad (ﷺ)');
+});
+
+test('conversion only replaces the salutation words and keeps source enclosures',()=>{
+  assert.equal(normalizeBlessing('SAW'), 'ﷺ');
+  assert.equal(normalizeBlessing('(SAW)'), '(ﷺ)');
+  assert.equal(normalizeBlessing('[SAW]'), '[ﷺ]');
+  assert.equal(normalizeBlessing('"SAW"'), '"ﷺ"');
+  assert.equal(normalizeBlessing('Muhammad (PBUH) said'), 'Muhammad (ﷺ) said');
+  assert.equal(normalizeBlessing('Muhammad SAW said'), 'Muhammad ﷺ said');
+  assert.equal(normalizeBlessing('Muhammad (peace be upon him) said'), 'Muhammad (ﷺ) said');
+  assert.equal(normalizeBlessing('Muhammad peace be upon him said'), 'Muhammad ﷺ said');
+  assert.equal(normalizeBlessing('Messenger (peace and blessings of Allah upon him)'), 'Messenger (ﷺ)');
+  assert.equal(normalizeBlessing('Messenger (may peace and blessings of Allah upon him)'), 'Messenger (ﷺ)');
+  assert.equal(normalizeBlessing('Muhammad ( SAW ) said'), 'Muhammad (ﷺ) said');
 });
 
 test('Arabic phrase conversion preserves surrounding punctuation',()=>{
@@ -122,6 +136,28 @@ test('RA normalization handles bare and comma-delimited salutations with spacing
   assert.equal(normalizeStandaloneRa("Jabir bin 'Abdullah, may Allah be pleased with them,"), "Jabir bin 'Abdullah رضي اللّه عنهم");
   assert.equal(normalizeStandaloneRa("Jabir bin 'Abdullah may Allah be pleased with them"), "Jabir bin 'Abdullah رضي اللّه عنهم");
   assert.equal(normalizeStandaloneRa("Jabir bin 'Abdullah (may Allah be pleased with them)"), "Jabir bin 'Abdullah (رضي اللّه عنهم)");
+});
+
+test('RA normalization preserves source enclosures and never adds parentheses',()=>{
+  assert.equal(normalizeStandaloneRa('(May Allah be pleased with him)'),'(رضي اللّه عنه)');
+  assert.equal(normalizeStandaloneRa('[May Allah be pleased with her]'),'[رضي اللّه عنها]');
+  assert.equal(normalizeStandaloneRa('"May Allah be pleased with them"'),'"رضي اللّه عنهم"');
+  assert.equal(normalizeStandaloneRa('( may Allah be pleased with him )'),'(رضي اللّه عنه)');
+  assert.equal(normalizeStandaloneRa('May Allah be pleased with him'),'رضي اللّه عنه');
+  assert.equal(normalizeStandaloneRa('[RA] and (R.A.)'),'[رَضِيَ ٱللَّٰهُ عَنْهُ] and (رَضِيَ ٱللَّٰهُ عَنْهُ)');
+});
+
+test('already-Arabic RA text keeps its exact spacing',()=>{
+  assert.equal(normalizeStandaloneRa('Muhammad رَضِيَ ٱللَّٰهُ عَنْهُ said'),'Muhammad رَضِيَ ٱللَّٰهُ عَنْهُ said');
+  assert.equal(normalizeStandaloneRa('( رضي اللّه عنه )'),'( رضي اللّه عنه )');
+  assert.equal(normalizeStandaloneRa('(رضي اللّه عنها)'),'(رضي اللّه عنها)');
+});
+
+test('bare RA wording keeps the space before the next word',()=>{
+  assert.equal(normalizeStandaloneRa('Jabir may Allah be pleased with him said'),'Jabir رضي اللّه عنه said');
+  assert.equal(normalizeStandaloneRa('Jabir [may Allah be pleased with him] said'),'Jabir [رضي اللّه عنه] said');
+  assert.equal(normalizeStandaloneRa('Jabir, may Allah be pleased with her said'),'Jabir رضي اللّه عنها said');
+  assert.equal(normalizeStandaloneRa('May Allah be pleased with him, and more'),'رضي اللّه عنه, and more');
 });
 
 test('salutation variants with Allah wording normalize to ﷺ',()=>{

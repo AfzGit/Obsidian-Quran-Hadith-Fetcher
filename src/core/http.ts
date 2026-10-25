@@ -66,9 +66,9 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
       signal.removeEventListener('abort', onAbort);
       fn();
     };
-    const timer = setTimeout(() => done(resolve), ms);
+    const timer = window.setTimeout(() => done(resolve), ms);
     const onAbort = (): void => {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       done(() => reject(new AppError('Operation cancelled.', 'cancelled')));
     };
     signal.addEventListener('abort', onAbort, { once: true });

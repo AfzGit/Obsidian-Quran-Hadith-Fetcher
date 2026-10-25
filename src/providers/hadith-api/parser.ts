@@ -1,6 +1,5 @@
-import type { CollectionDefinition, HadithGrade, HadithReference, HadithResult, TranslationDefinition } from '../../domain/models';
+import type { HadithGrade, HadithReference, HadithResult, TranslationDefinition } from '../../domain/models';
 
-interface ApiGrade { name?: unknown; grade?: unknown; grader?: unknown; author?: unknown; source?: unknown; name_en?: unknown; name_ar?: unknown; grader_en?: unknown; grader_ar?: unknown; }
 interface ApiHadith { hadithnumber?: string|number; text?: string; grades?: unknown; }
 interface ApiContainer { metadata?: { name?: string; nameEn?: string }; hadiths?: ApiHadith[]; }
 

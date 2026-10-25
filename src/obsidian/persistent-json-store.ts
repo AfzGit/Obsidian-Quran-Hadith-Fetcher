@@ -21,7 +21,7 @@ export class ObsidianPersistentJsonStore implements PersistentJsonStore {
   // Concurrent writes must share mkdir work so Vault adapters do not race on folders.
   private rootPromise?:Promise<void>;
   constructor(app:App,pluginId:string,subdir='provider-cache'){
-    this.adapter=app.vault.adapter as unknown as Adapter;
+    this.adapter=app.vault.adapter;
     this.root=normalizePath(`${app.vault.configDir}/plugins/${pluginId}/${subdir}`);
   }
   private async ensureRoot():Promise<void>{

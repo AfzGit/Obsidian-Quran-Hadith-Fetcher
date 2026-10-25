@@ -36,17 +36,17 @@ export class MemoryCacheStore implements CacheStore {
     // Map insertion order provides a cheap LRU implementation: a read moves the
     // entry to the end so frequently used values survive eviction longer.
     this.values.delete(key);
-    this.values.set(key, entry as CacheEntry<unknown>);
+    this.values.set(key, entry);
     return entry;
   }
 
   async set<T>(entry: CacheEntry<T>): Promise<void> {
     // Replace an existing entry at the newest position in the LRU order.
     this.values.delete(entry.key);
-    this.values.set(entry.key, entry as CacheEntry<unknown>);
+    this.values.set(entry.key, entry);
 
     while (this.values.size > this.maxEntries) {
-      const oldest = this.values.keys().next().value as string | undefined;
+      const oldest = this.values.keys().next().value;
       if (oldest === undefined) break;
       this.values.delete(oldest);
     }
