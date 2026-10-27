@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7
+
+- Added screenshots of the main workflows to the README, including command, provider, offline database and text conversion settings.
+- Added a Quran and Hadith gallery covering final output, selection, formatting and preview screens.
+- Clarified the disclaimer to cover scholarly and academic use.
+
 ## 1.0.6
 
 - Added build provenance attestations for release assets so downloads can be verified against the source repository.
