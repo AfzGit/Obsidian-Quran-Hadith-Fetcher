@@ -4,6 +4,11 @@
 
 Quran and Hadith Fetcher is an Obsidian plugin that fetches Quran Ayaat and also Ahadith from multiple online sources. It also has some additional features useful for the seeker of Islamic knowledge like: previewing the Quran/Hadith before inserting, optional offline databases, and other useful text formatting options.
 
+| **Quran** | **Hadith** |
+|---|---|
+| <img src="https://github.com/user-attachments/assets/3c93b6f7-20b2-4a2f-9acc-c837288da5be" width="400" alt="Final Quran Output" /> | <img src="https://github.com/user-attachments/assets/967453ac-edf3-468f-a57c-3ecfd2724ecb" width="400" alt="Final Hadith Output" /> |
+|  |  |
+
 It supports multiple languages, translations, and Ahadith books (depending on the provider).
 
 > Disclaimer: Please double check. Do not trust this plugin or the hadith providers for scholarly work.
@@ -18,6 +23,29 @@ Run these commands in the command palette (`Ctrl-p`)
 | Fetch Hadith | Get Ahadith. Also supports ranges.             |
 
 > Fetching is limited to 30 Ayaat and 15 Ahadith to prevent accidental fetches and resource usage. These can easily be modified in the settings.
+
+## Gallery
+
+### General
+
+| Commands | Provider Settings |
+|---|---|
+| <img src="https://github.com/user-attachments/assets/ff904085-186e-4ea2-a7a9-dd862e971cf0" width="350" alt="Commands"> | <img src="https://github.com/user-attachments/assets/171d7363-8480-4ef0-ba39-e6f44c3e1653" width="350" alt="Provider Settings"> |
+
+| Offline Databases Support | Auto-format |
+|---|---|
+| <img src="https://github.com/user-attachments/assets/b0f31583-5dff-4560-9b1b-58451768c5ef" width="350" alt="Offline Databases Support"> | <img src="https://github.com/user-attachments/assets/a9404fcf-f0a7-4f06-af31-2a1113ac15c6" width="350" alt="Auto-format"> |
+
+| Text Conversions |
+|---|
+| <img src="https://github.com/user-attachments/assets/a4db00af-44d1-490e-b05d-74ffd498aa1a" width="350" alt="Text Conversions"> |
+
+### Quran and Hadith
+
+| **Quran** | **Hadith** |
+|---|---|
+| **Final Output**<br><img src="https://github.com/user-attachments/assets/3c93b6f7-20b2-4a2f-9acc-c837288da5be" width="350" alt="Final Quran Output"><br><br>**Surah List**<br><img src="https://github.com/user-attachments/assets/36376528-0191-4fc7-a997-11afb9e74094" width="350" alt="Surah List"><br><br>**Ayah Selection**<br><img src="https://github.com/user-attachments/assets/1b39ee7e-2e35-47b7-a81a-3dd86fddcf54" width="350" alt="Ayah Selection"><br><br>**Format Options**<br><img src="https://github.com/user-attachments/assets/ffbe35a4-08c3-48ef-89b4-86a7a6fc5113" width="350" alt="Quran Format Options"><br><br>**Preview**<br><img src="https://github.com/user-attachments/assets/24f28174-360e-4f73-9bcf-c9ea9a42711d" width="350" alt="Quran Preview"> | **Final Output**<br><img src="https://github.com/user-attachments/assets/967453ac-edf3-468f-a57c-3ecfd2724ecb" width="350" alt="Final Hadith Output"><br><br>**Hadith Book List**<br><img src="https://github.com/user-attachments/assets/7e3f36dd-85db-4ade-b9c9-0f2fe560b6f3" width="350" alt="Hadith Book List"><br><br>**Reference Selection**<br><img src="https://github.com/user-attachments/assets/1460148e-4b76-4ad7-84fc-6aea9c00f2e6" width="350" alt="Hadith Reference Selection"><br><br>**Format Options**<br><img src="https://github.com/user-attachments/assets/87903649-9c03-4022-bbaf-dc6e21b36601" width="350" alt="Hadith Output Options"><br><br>**Preview**<br><img src="https://github.com/user-attachments/assets/bc1b48f2-8995-45cc-b519-76ca3bf2ba5f" width="350" alt="Hadith Preview"> |
+| **Reserved** | **Reserved** |
 
 ## Command: Fetch Quran
 
