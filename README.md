@@ -183,6 +183,7 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 - [ ] Make Database Installations async
 - [ ] Expand salutations scope like: `(May the peace and blessing of Allah be upon him)`
 - [ ] Options to replace hadithjson replacements with Sunnah.com links
+	- [ ] Possibly even replace hadith-api branding with Sunnah.com like "Sunnah.com (via Hadith-API)"
 
 # License
 
