@@ -173,8 +173,7 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 
 # Known Bugs
 
-- ", peace and blessings be upon him," returns ", (ﷺ)," instead of "ﷺ"
-- "(ﷺ)" is replaced by "ﷺ" in Sunan Abu Dawud 1420. Grading does not work too. (HadithUnlocked)
+- Newline is remove but not replaced by space like with "Ibn Abbas:The Prophet" for Hadith-Api/Bukhari/3656. It should be turned back into newline for this specific context
 
 # Roadmap
 
