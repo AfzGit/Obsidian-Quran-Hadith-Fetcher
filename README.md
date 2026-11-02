@@ -83,8 +83,8 @@ These commands can be enabled from the settings
 | `Manage offline databases`                                             | Open the database management modal used for downloading and removing databases for offline use.                                                 |
 | `Set Quran link website`                                               | Configure the website used when embedding website link in fetched Ayaat                                                                         |
 | `Set Hadith translation`                                               | Set the default translation for Hadith text.                                                                                                    |
-| `Set Quran translation language`                                       | Select the primary language for Quran translations.                                                                                             |
 | `Set Hadith link website`                                              | Keep the original provider URL, or choose Sunnah.com or Hadith Hub for hadith-api and Hadith JSON links.                                     |
+| `Set Quran translation language`                                       | Select the primary language for Quran translations.                                                                                             |
 
 # Settings and commands
 
@@ -106,7 +106,7 @@ Quran and Hadith providers are selected independently in **Settings → Provider
 | Quran  | [Quran Project API](https://github.com/The-Quran-Project/Quran-API) | Arabic text and English, Bengali, and Urdu translations.                                                          |
 | Hadith | [hadith-api](https://github.com/fawazahmed0/hadith-api)             | Collections and translations from its edition catalog, with Arabic and translation editions retrieved separately. |
 | Hadith | [Hadith Unlocked](https://hadithunlocked.com)                       | Its supported collection catalog and English translation.                                                         |
-| Hadith | [Hadith JSON](https://github.com/AhmedBaset/hadith-json)            | 17 books from the pinned `hadith-json` v1.2.0 dataset, with Arabic and English text. Uses [Sunnah.com](https://www.sunnah.com) data (e.g., using 202a for Sahih Muslim)                              |
+| Hadith | [Hadith JSON](https://github.com/AhmedBaset/hadith-json)            | 17 books from the pinned `hadith-json` v1.2.0 dataset, with Arabic and English text. Uses [Sunnah.com](https://www.sunnah.com) data (e.g., using 204a for Sahih Muslim)                              |
 
 Providers may differ in the collections, translations, grading, source links, and offline data they expose. The plugin does not guarantee that every number exists in every provider's version of a collection; the provider response is authoritative for an individual Hadith number.
 
@@ -184,10 +184,10 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 - [ ] Display better error messages if Hadith is not found
 - [ ] Make Database Installations async
 - [ ] Expand salutations scope like: `(May the peace and blessing of Allah be upon him)`
-- [ ] Options to replace HadithJSON replacements with Sunnah.com links
-	- [ ] Possibly even replace HadithJSON branding with Sunnah.com like "Sunnah.com (via HadithJSON)"
-	- [ ] Make the inserted link for HadithJSON use Sunnah.com url instead.
-	- [ ] HadithJSON uses "in-book reference" of Sunnah.com instead of the standard letter based numbering. Put a disclaimer for this when fetching hadith from Muslim using HadithJSON.
+- [ ] HadithJSON uses "in-book reference" of Sunnah.com instead of the standard letter based numbering. Put a disclaimer for this when fetching hadith from Muslim using HadithJSON.
+- [ ] Standardize Muslim to use the letter number format (e.g., 204a)
+	- [ ] once standardized, enable `https://hadithhub.com/` links to be inserted instead of the source links, like `https://hadithhub.com/muslim:204a?lang=en%2Car`
+- [ ] instead of `Sound`, `Good`, and `Chain`, give the option in settings to instead use `Sahih`, `Hasan`, and `Isnaad` respectively. this should be enabled by default
 
 # License
 
