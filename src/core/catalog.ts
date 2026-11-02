@@ -35,11 +35,39 @@ const HADITH_ALIASES: Record<string,string> = {
 };
 
 /**
+ * Stable display order shared by every Hadith provider. Providers intentionally
+ * expose different subsets, but a collection that appears in more than one
+ * provider must retain the same number in the selection modal.
+ */
+const HADITH_COLLECTION_ORDER: Readonly<Record<string,number>> = {
+  bukhari:1, muslim:2, nasai:3, abudawud:4, tirmidhi:5, ibnmajah:6,
+  malik:7, ahmad:8, darimi:9, nawawi40:10, qudsi40:11,
+  shahwaliullah40:12, riyadussalihin:13, mishkat_almasabih:14,
+  aladab_almufrad:15, shamail_muhammadiyah:16, bulugh_almaram:17,
+  ibnrajab50:18, 'lulu-marjan':19, hakim:20, ibnhibban:21,
+  ibnkhuzaymah:22, bazzar:23, daraqutni:24, abdalrazzaq:25,
+  ibnabishaybah:26, 'nasai-kubra':27, bayhaqi:28, tayalisi:29,
+  abuyaala:30, matalib:31, 'tabarani-saghir':32, 'tabarani-awsat':33,
+  tabarani:34, suyuti:35,
+};
+
+export function canonicalHadithCollectionId(id:string):string { return HADITH_ALIASES[id] ?? id; }
+
+/** Unknown future provider collections sort after the known standardized list. */
+export function hadithCollectionOrder(id:string):number { return HADITH_COLLECTION_ORDER[canonicalHadithCollectionId(id)] ?? 99; }
+
+export function formatHadithCollectionLabel(collection:CollectionDefinition):string {
+  const normalized=normalizeHadithCollectionMetadata(collection);
+  const number=String(hadithCollectionOrder(collection.id)).padStart(2,'0');
+  return `${number} ${normalized.name}`;
+}
+
+/**
  * Normalize Hadith collection metadata at the provider boundary so naming differences
  * do not leak into settings, selection modals, or generated output.
  */
 export function normalizeHadithCollectionMetadata(collection: CollectionDefinition): CollectionDefinition {
-  const canonicalId = HADITH_ALIASES[collection.id] ?? collection.id;
+  const canonicalId = canonicalHadithCollectionId(collection.id);
   const canonical = HADITH_CANONICAL[canonicalId];
   if (!canonical) return {...collection};
   return {...collection,name:canonical.name,author:canonical.author};

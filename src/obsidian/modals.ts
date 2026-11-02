@@ -4,7 +4,7 @@ import { FuzzySuggestModal, Modal, Notice, Setting, setIcon, type App } from 'ob
 import type { CollectionDefinition, OutputOptions, ProviderKind } from '../domain/models';
 import type { InstalledOfflineDatabase, OfflineDatabaseDefinition, OfflineInstallProgress } from '../domain/offline';
 import type { ReplacementRule } from '../core/normalization';
-import { normalizeHadithCollectionMetadata } from '../core/catalog';
+import { formatHadithCollectionLabel, hadithCollectionOrder, normalizeHadithCollectionMetadata } from '../core/catalog';
 
 interface OfflineProviderSummary { id:string; name:string; kind:ProviderKind; }
 
@@ -112,10 +112,15 @@ export class CollectionModal extends FuzzySuggestModal<CollectionDefinition> {
     super(app);
     this.setPlaceholder('Search collection…');
   }
-  override getItems(){return this.collections;}
+  override getItems(){
+    return [...this.collections].sort((a,b)=>{
+      const order=hadithCollectionOrder(a.id)-hadithCollectionOrder(b.id);
+      return order || a.name.localeCompare(b.name);
+    });
+  }
   override getItemText(item:CollectionDefinition){
     const normalized=normalizeHadithCollectionMetadata(item);
-    const name=decodeHtmlEntities(normalized.name);
+    const name=decodeHtmlEntities(formatHadithCollectionLabel(normalized));
     const author=normalized.author ? formatScholarName(decodeHtmlEntities(normalized.author)) : '';
     const base=author ? `${name} — ${author}` : name;
     return this.offlineCollectionIds.has(item.id) ? `${base} ⬇️` : base;

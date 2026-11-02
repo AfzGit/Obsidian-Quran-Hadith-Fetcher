@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9
+
+- Numbered and sorted the Hadith collection picker with provider-independent two-digit prefixes, keeping shared collections in the same position across providers.
+
 ## 1.0.8
 
 - Added comma-separated Hadith references and mixed range support while preserving the requested order and duplicates.
