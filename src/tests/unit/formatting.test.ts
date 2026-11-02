@@ -99,6 +99,13 @@ test('Hadith formatting includes English isnad and English grading label',()=>{
   assert.match(out,/>\n> Grading: Weak \(ʿAli Zaʾī\)/);
 });
 
+test('Hadith formatter keeps an English narrator label and matn on quoted lines',()=>{
+  const r:HadithResult={...h,englishIsnad:'Narrated Abu Musa:',english:'A man came to the Prophet.'};
+  const out=formatHadith(r,DEFAULT_FORMATTING,{arabic:false,english:true,grading:false});
+  assert.match(out,/> Narrated Abu Musa:\n> A man came to the Prophet\./);
+  assert.doesNotMatch(out,/Narrated Abu Musa:A man came/u);
+});
+
 
 test('Hadith formatter decodes HTML entities in collection names',()=>{
   const out=formatHadith({...h,collectionName:'Ibn Rajab&#39;s Fifty'},DEFAULT_FORMATTING,{arabic:true,english:false,grading:false});

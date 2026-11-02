@@ -75,6 +75,26 @@ test('Hadith API preserves a newline-separated English narrator',()=>{
   assert.equal(r.english,'When this Ayah was revealed.');
 });
 
+test('Hadith API separates an inline English narrator label',()=>{
+  const r=parseHadithApiResponse(
+    {hadiths:[{hadithnumber:123,text:'AR'}]},
+    {hadiths:[{hadithnumber:123,text:'Narrated Abu Musa:A man came to the Prophet.'}]},
+    {kind:'hadith',collectionId:'bukhari',hadithNumber:123},'Sahih Al-Bukhari','hadith-api'
+  );
+  assert.equal(r.englishIsnad,'Narrated Abu Musa:');
+  assert.equal(r.english,'A man came to the Prophet.');
+});
+
+test('Hadith API preserves ordinary colons in English text',()=>{
+  const r=parseHadithApiResponse(
+    {hadiths:[{hadithnumber:124,text:'AR'}]},
+    {hadiths:[{hadithnumber:124,text:'The Prophet said: Keep the prayer.'}]},
+    {kind:'hadith',collectionId:'bukhari',hadithNumber:124},'Sahih Al-Bukhari','hadith-api'
+  );
+  assert.equal(r.englishIsnad,undefined);
+  assert.equal(r.english,'The Prophet said: Keep the prayer.');
+});
+
 
 test('Hadith Unlocked parser preserves the Arabic isnad separately from the matn',()=>{
   const raw=[{ref:'bukhari:200',num:200,isnad_ar:'حَدَّثَنَا مُسَدَّدٌ قَالَ حَدَّثَنَا حَمَّادٌ عَنْ ثَابِتٍ عَنْ أَنَسٍ',body:'أَنَّ النَّبِيَّ ﷺ دَعَا بِإِنَاءٍ مِنْ مَاءٍ',body_en:'The Prophet ﷺ asked for water.'}];

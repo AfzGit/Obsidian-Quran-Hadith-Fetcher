@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.12
+
+- Fixed Hadith API narrator labels that are immediately followed by text, preserving them as a separate quoted line.
+
 ## 1.0.11
 
 - Fixed canonical Sahih Muslim references in hadith-api and Hadith JSON, including bare number references and Hadith JSON ranges.
