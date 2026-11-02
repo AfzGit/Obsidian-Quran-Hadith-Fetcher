@@ -172,7 +172,7 @@ export class HadithApiProvider implements HadithProvider {
   }
 
   private async createMuslimReferenceIndex(signal: AbortSignal, offlineEnglish?: unknown): Promise<Map<string,number>> {
-    const raw=offlineEnglish ?? (await this.http.getJson<unknown>(`${BASE}/editions/eng-muslim.min.json`,signal)).json;
+    const raw=offlineEnglish ?? await this.getMuslimReferenceEdition(signal);
     const root=raw && typeof raw==='object' ? raw as {hadiths?:unknown[]} : {};
     const index=new Map<string,number>();
     for (const value of root.hadiths ?? []) {
@@ -186,6 +186,27 @@ export class HadithApiProvider implements HadithProvider {
       index.set(`${match[1]}${suffix}`,item.hadithnumber);
     }
     return index;
+  }
+
+  /** The full Muslim edition is needed only to reconcile canonical references.
+   * Some CDN edges reject this large JSON file with 403, so use the same public
+   * repository mirror as the targeted-fetch fallback instead of treating that as
+   * a missing Hadith. */
+  private async getMuslimReferenceEdition(signal:AbortSignal):Promise<unknown>{
+    const urls=[
+      `${BASE}/editions/eng-muslim.min.json`,
+      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/eng-muslim.min.json`,
+    ];
+    let lastError:unknown;
+    for(const url of urls){
+      try{return (await this.http.getJson<unknown>(url,signal)).json;}
+      catch(error){
+        lastError=error;
+        if(signal.aborted) throw error;
+        if(error instanceof AppError && error.kind==='http' && ![403,404,500,502,503].includes(error.status ?? 0)) throw error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new AppError('Could not load Sahih Muslim reference metadata.','network');
   }
 
   async fetchHadithRange(reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult[]> {

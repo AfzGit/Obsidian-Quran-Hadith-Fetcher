@@ -219,6 +219,15 @@ test('Hadith Unlocked parser matches Muslim alphabetic references',()=>{
   assert.equal(r.reference.hadithNumber,'202a');
 });
 
+test('Hadith Unlocked parser preserves an unsuffixed reference returned after a suffix redirect',()=>{
+  const r=parseHadithUnlockedResponse(
+    [{ref:'muslim:202',num:'202',body:'AR',body_en:'EN'}],
+    {kind:'hadith',collectionId:'muslim',hadithNumber:'202a'},
+    {id:'muslim',name:'Sahih Muslim',providerId:'hadith-unlocked'},'https://hadithunlocked.com/muslim:202a'
+  );
+  assert.equal(r.reference.hadithNumber,202);
+});
+
 test('Hadith API parser matches alphabetic Hadith numbers',()=>{
   const r=parseHadithApiResponse(
     {hadiths:[{hadithnumber:'202a',text:'AR'}]},

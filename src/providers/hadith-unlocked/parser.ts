@@ -140,6 +140,16 @@ function pickItem(raw: unknown, reference: HadithReference): HadithUnlockedItem 
   return candidates.find(item => itemMatchesReference(item, reference)) ?? candidates[0];
 }
 
+/** Preserve the provider's actual reference when its web route redirected an
+ * unsupported suffix to an ordinary narration (for example `202a` -> `202`). */
+function resolvedReference(item:HadithUnlockedItem, requested:HadithReference):HadithReference {
+  const direct=referenceKey(item.ref);
+  const expectedPrefix=`${requested.collectionId.toLowerCase()}:`;
+  const value=direct?.startsWith(expectedPrefix) ? direct.slice(expectedPrefix.length) : referenceKey(item.num) ?? referenceKey(item.number);
+  if(!value || !/^\d{1,6}[a-z]?$/iu.test(value)) return requested;
+  return {...requested,hadithNumber:/^\d+$/u.test(value) ? Number(value) : value.toLowerCase()};
+}
+
 function gradeTextAndGrader(raw: unknown, item: HadithUnlockedItem): { text?: string; grader?: string } {
   const obj = isRecord(raw) ? raw as HadithUnlockedGradeLike : undefined;
   let text = str(obj?.grade_en) ?? str(obj?.grade) ?? str(item.grade_grade_en) ?? str(item.grade_grade);
@@ -177,7 +187,7 @@ export function parseHadithUnlockedResponse(raw: unknown, reference: HadithRefer
   const item = pickItem(raw, reference);
   const collectionName=decodeEntities(collection.name);
   if(!item) return {kind:'hadith',reference,collectionName,grades:[],source:{providerId:collection.providerId,providerName:'Hadith Unlocked',sourceUrl,retrievedAt:new Date().toISOString(),collectionId:collection.id,collectionName}};
-  const result:HadithResult={kind:'hadith',reference,collectionName,grades:gradeFromItem(item),source:{providerId:collection.providerId,providerName:'Hadith Unlocked',sourceUrl,retrievedAt:new Date().toISOString(),collectionId:collection.id,collectionName}};
+  const result:HadithResult={kind:'hadith',reference:resolvedReference(item,reference),collectionName,grades:gradeFromItem(item),source:{providerId:collection.providerId,providerName:'Hadith Unlocked',sourceUrl,retrievedAt:new Date().toISOString(),collectionId:collection.id,collectionName}};
   // Downloaded books escape the isnad separator as `&gt;`; online responses do not.
   const text=(value:string|undefined)=>value ? decodeEntities(value) : undefined;
   const arabic=text(str(item.body)??str(item.body_ar)??str(item.text_arabic)??str(item.full_arabic)??nestedText(item.text,['ar','arabic']));

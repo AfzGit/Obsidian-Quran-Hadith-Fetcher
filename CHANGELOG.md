@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.10
+
+- Fixed Sahih Muslim range retrieval when hadith-api's CDN rejects the large reference metadata file.
+- Preserved Hadith Unlocked's actual unsuffixed references after its suffix-route redirects.
+
 ## 1.0.9
 
 - Numbered and sorted the Hadith collection picker with provider-independent two-digit prefixes, keeping shared collections in the same position across providers.
