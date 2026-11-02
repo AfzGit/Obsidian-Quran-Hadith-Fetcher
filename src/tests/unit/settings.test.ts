@@ -18,7 +18,7 @@ test('command palette defaults expose only fetch, normalization, and health comm
 });
 
 test('defaults are stable',()=>{
-  assert.equal(DEFAULT_SETTINGS.schemaVersion,14);
+  assert.equal(DEFAULT_SETTINGS.schemaVersion,15);
   assert.equal(DEFAULT_SETTINGS.quranProvider,'alquran-cloud');
   assert.equal(DEFAULT_SETTINGS.hadithProvider,'hadith-api');
   assert.equal(DEFAULT_SETTINGS.quranLanguage,'en');
@@ -26,6 +26,7 @@ test('defaults are stable',()=>{
   assert.equal(DEFAULT_SETTINGS.quranTranslation,'hilali-khan');
   assert.equal(DEFAULT_SETTINGS.hadithLanguage,'en');
   assert.equal(DEFAULT_SETTINGS.hadithTranslation,'eng');
+  assert.equal(DEFAULT_SETTINGS.hadithLinkDestination,'provider');
   assert.equal(DEFAULT_SETTINGS.hadithLanguage,'en');
   assert.equal(DEFAULT_SETTINGS.hadithTranslation,'eng');
   assert.equal(DEFAULT_SETTINGS.blessingNormalization,true);
@@ -65,7 +66,7 @@ test('migration keeps legacy output preferences in separate last-used options',(
   assert.equal(migrated.lastQuranOptions.link,false);
   assert.equal(migrated.lastHadithOptions.grading,false);
   assert.equal(migrated.lastHadithOptions.link,false);
-  assert.equal(migrated.schemaVersion,14);
+  assert.equal(migrated.schemaVersion,15);
   assert.equal(migrated.quranProvider,'alquran-cloud');
   assert.equal(migrated.formatting.ayahNumberOpen,'⟪');
   assert.equal(migrated.formatting.ayahNumberClose,'⟫');
@@ -169,7 +170,7 @@ test('legacy command ids migrate to renamed commands',()=>{
     'check-provider-health':true,
     'disable-all-text-conversions':true,
   } as any});
-  assert.equal(migrated.schemaVersion,14);
+  assert.equal(migrated.schemaVersion,15);
   assert.equal(migrated.commandVisibility['fetch-quran'],false);
   assert.equal(migrated.commandVisibility['fetch-hadith'],true);
   assert.equal(migrated.commandVisibility['normalize-salutations'],true);
@@ -182,7 +183,7 @@ test('legacy command ids migrate to renamed commands',()=>{
 test('v12 untouched command visibility adopts the new command defaults',()=>{
   const legacyAllEnabled=Object.fromEntries(COMMAND_DEFINITIONS.map(command=>[command.id,true]));
   const migrated=migrateSettings({schemaVersion:12,commandVisibility:legacyAllEnabled});
-  assert.equal(migrated.schemaVersion,14);
+  assert.equal(migrated.schemaVersion,15);
   assert.equal(migrated.commandVisibility['fetch-quran'],true);
   assert.equal(migrated.commandVisibility['fetch-hadith'],true);
   assert.equal(migrated.commandVisibility['normalize-salutations'],true);
@@ -194,7 +195,7 @@ test('v12 untouched command visibility adopts the new command defaults',()=>{
 test('current v13 command visibility is not mistaken for legacy defaults',()=>{
   const allEnabled=Object.fromEntries(COMMAND_DEFINITIONS.map(command=>[command.id,true]));
   const migrated=migrateSettings({schemaVersion:13,commandVisibility:allEnabled});
-  assert.equal(migrated.schemaVersion,14);
+  assert.equal(migrated.schemaVersion,15);
   assert.equal(migrated.commandVisibility['set-quran-provider'],true);
   assert.equal(migrated.commandVisibility['convert-ra'],true);
   assert.equal(migrated.commandVisibility['toggle-text-conversions'],true);

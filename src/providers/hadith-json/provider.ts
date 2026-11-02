@@ -8,6 +8,7 @@ import { setPersistentCacheBestEffort, type PersistentJsonStore } from '../../co
 
 const BASE='https://raw.githubusercontent.com/AhmedBaset/hadith-json/v1.2.0';
 const DATASET_VERSION='v1.2.0';
+const HADITH_API_MUSLIM_EDITION='https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/eng-muslim.min.json';
 const TRANSLATION:TranslationDefinition={id:'en',language:'en',name:'English',providerId:'hadith-json'};
 const COLLECTIONS:readonly CollectionDefinition[]=[
   {id:'bukhari',name:'Sahih Al-Bukhari',providerId:'hadith-json',author:'Imam Muhammad Ibn Ismail Al-Bukhari'},
@@ -57,6 +58,7 @@ export class HadithJsonProvider implements HadithProvider{
   private readonly bookIndexCache=new Map<string,{source:unknown;index:Map<string,unknown>}>();
   private readonly maxMemoryBooks=3;
   private readonly bookLoads=new Map<string,Promise<unknown>>();
+  private muslimCanonicalIndex:Promise<Map<string,number>>|null=null;
   constructor(private readonly http:HttpClient,private readonly cacheEnabled:()=>boolean=()=>true,private readonly offline?:OfflineDatabaseStore,private readonly persistentCache?:PersistentJsonStore){}
   async listCollections(_ctx:FetchContext):Promise<CollectionDefinition[]>{return COLLECTIONS.map(x=>normalizeHadithCollectionMetadata(x));}
   async listTranslations(_ctx:FetchContext):Promise<TranslationDefinition[]>{return [{...TRANSLATION}];}
@@ -66,7 +68,8 @@ export class HadithJsonProvider implements HadithProvider{
     const collection=this.getCollection(reference.collectionId);
     this.validateTranslation(translation);
     const data=await this.loadBook(collection.id,ctx);
-    return this.parseFromBook(reference,collection,translation,data);
+    const providerNumber=await this.resolveMuslimReference(reference,data,ctx);
+    return this.parseFromBook(reference,collection,translation,data,providerNumber);
   }
   async fetchHadithRange(reference:HadithReference,translation:TranslationDefinition,ctx:FetchContext):Promise<HadithResult[]>{
     const collection=this.getCollection(reference.collectionId);
@@ -123,7 +126,7 @@ export class HadithJsonProvider implements HadithProvider{
       const positionKey=String(position+1);
       if(!index.has(positionKey)) index.set(positionKey,value);
       const record=asRecord(value);
-      for(const candidate of [record?.hadithnumber,record?.hadithNumber,record?.num,record?.ref]){
+      for(const candidate of [record?.idInBook,record?.hadithnumber,record?.hadithNumber,record?.num,record?.ref]){
         if(typeof candidate!=='string'&&typeof candidate!=='number') continue;
         const raw=String(candidate).trim();
         if(!raw) continue;
@@ -137,6 +140,35 @@ export class HadithJsonProvider implements HadithProvider{
       const oldest=this.bookIndexCache.keys().next().value;
       if(oldest===undefined)break;
       this.bookIndexCache.delete(oldest);
+    }
+    return index;
+  }
+
+  private async resolveMuslimReference(reference:HadithReference,data:unknown,ctx:FetchContext):Promise<HadithReference['hadithNumber']>{
+    if(reference.collectionId!=='muslim' || typeof reference.hadithNumber!=='string') return reference.hadithNumber;
+    if(!this.muslimCanonicalIndex) this.muslimCanonicalIndex=this.loadMuslimCanonicalIndex(ctx);
+    const providerId=(await this.muslimCanonicalIndex).get(reference.hadithNumber.toLowerCase());
+    if(providerId===undefined) throw new AppError(`Canonical Sahih Muslim reference ${reference.hadithNumber} was not found.`,'parse');
+    if(!this.indexBook('muslim',data).has(String(providerId))) throw new AppError(`Hadith JSON has no verified crosswalk for Sahih Muslim ${reference.hadithNumber}.`,'parse');
+    return providerId;
+  }
+
+  private async loadMuslimCanonicalIndex(ctx:FetchContext):Promise<Map<string,number>>{
+    const raw=(await this.http.getJson<unknown>(HADITH_API_MUSLIM_EDITION,ctx.signal)).json;
+    const hadiths=raw&&typeof raw==='object'&&Array.isArray((raw as {hadiths?:unknown[]}).hadiths) ? (raw as {hadiths:unknown[]}).hadiths : [];
+    const index=new Map<string,number>();
+    for(const value of hadiths){
+      if(!value||typeof value!=='object')continue;
+      const item=value as {arabicnumber?:unknown;reference?:{hadith?:unknown}};
+      if(typeof item.reference?.hadith!=='number'||typeof item.arabicnumber!=='string')continue;
+      const match=/^(\d+)(?:\.(\d+))?$/u.exec(item.arabicnumber.trim());
+      if(!match)continue;
+      const suffix=match[2]?String.fromCharCode(96+Number(match[2])):'';
+      if(suffix&&(suffix<'a'||suffix>'z'))continue;
+      // Fawaz's `reference.hadith` is the Sunnah/Hadith-JSON in-book ID.
+      // Its top-level `hadithnumber` is a different sequence and must not be
+      // used with Hadith JSON (204a is 407, whereas its Fawaz ID is 501).
+      index.set(`${match[1]}${suffix}`,item.reference.hadith);
     }
     return index;
   }
@@ -186,11 +218,11 @@ export class HadithJsonProvider implements HadithProvider{
     try{return await load;}finally{if(this.bookLoads.get(collectionId)===load)this.bookLoads.delete(collectionId);}
   }
 
-  private parseFromBook(reference:HadithReference,collection:CollectionDefinition,translation:TranslationDefinition,data:unknown):HadithResult{
+  private parseFromBook(reference:HadithReference,collection:CollectionDefinition,translation:TranslationDefinition,data:unknown,providerNumber:HadithReference['hadithNumber']=reference.hadithNumber):HadithResult{
     // Build the numeric index once per hot book. A range request can otherwise scan
     // the complete book once for every Hadith, turning a 15-Hadith range into many
     // repeated O(book-size) searches. The bounded index is evicted with the book.
-    const item=this.indexBook(collection.id,data).get(String(reference.hadithNumber).trim().toLowerCase());
+    const item=this.indexBook(collection.id,data).get(String(providerNumber).trim().toLowerCase());
     if(!item)throw new AppError(`Hadith ${reference.hadithNumber} was not found in ${collection.name}.`,'parse');
     const record=asRecord(item);const english=asRecord(record?.english);
     const arabic=asText(record?.arabic);const englishText=asText(english?.text);const narrator=asText(english?.narrator);

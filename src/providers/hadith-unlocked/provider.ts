@@ -102,6 +102,7 @@ export class HadithUnlockedProvider implements HadithProvider {
       }
       const raw = (await this.http.getJson<unknown>(`${pageUrl}?json`, ctx.signal)).json;
       const result = parseHadithUnlockedResponse(raw, reference, collection, pageUrl);
+      if (!result.arabic && !result.english) throw new AppError(`Hadith ${reference.hadithNumber} was not found in ${collection.name}.`, 'parse');
       if (this.cacheEnabled()) await setCacheBestEffort(this.cache, { version: 1, key, storedAt: Date.now(), value: result });
       return result;
     });

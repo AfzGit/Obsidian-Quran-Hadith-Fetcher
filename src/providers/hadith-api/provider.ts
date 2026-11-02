@@ -31,6 +31,7 @@ export class HadithApiProvider implements HadithProvider {
   private readonly hadithLoads = new SingleFlight<HadithResult>();
   private collectionsCache: CollectionDefinition[] | null = null;
   private translationsCache: TranslationDefinition[] | null = null;
+  private muslimReferenceIndex: Promise<Map<string,number>> | null = null;
   constructor(private readonly http: HttpClient, private readonly cacheEnabled: () => boolean = () => true, private readonly offline?: OfflineDatabaseStore) {}
 
   async listCollections(ctx: FetchContext): Promise<CollectionDefinition[]> {
@@ -144,17 +145,47 @@ export class HadithApiProvider implements HadithProvider {
     }
     if (!collection) throw new AppError('Unknown collection.', 'validation');
 
+    const providerNumber = reference.collectionId === 'muslim' && typeof reference.hadithNumber === 'string'
+      ? await this.resolveMuslimProviderNumber(reference.hadithNumber, ctx.signal, en?.json)
+      : reference.hadithNumber;
     const arabicEdition = collection.arabicEdition;
     const englishEdition = `${translation.id}-${reference.collectionId}`;
     if(!ar || !en) {
       [ar,en] = await Promise.all([
-        arabicEdition ? this.getEditionHadith(arabicEdition, reference.hadithNumber, ctx.signal) : Promise.resolve(null),
-        englishEdition ? this.getEditionHadith(englishEdition, reference.hadithNumber, ctx.signal) : Promise.resolve(null),
+        arabicEdition ? this.getEditionHadith(arabicEdition, providerNumber, ctx.signal) : Promise.resolve(null),
+        englishEdition ? this.getEditionHadith(englishEdition, providerNumber, ctx.signal) : Promise.resolve(null),
       ]);
     }
-    const result = parseHadithApiResponse(ar?.json, en?.json, reference, collection.name, this.metadata.id, translation);
+    const result = parseHadithApiResponse(ar?.json, en?.json, reference, collection.name, this.metadata.id, translation, providerNumber);
+    if (!result.arabic && !result.english) throw new AppError(`Hadith ${reference.hadithNumber} was not found in ${collection.name}.`, 'parse');
     if (this.cacheEnabled()) await setCacheBestEffort(this.cache, { version: 1, key, storedAt: Date.now(), value: result });
     return result;
+  }
+
+  private async resolveMuslimProviderNumber(canonical: string, signal: AbortSignal, offlineEnglish?: unknown): Promise<number> {
+    const key=canonical.trim().toLowerCase();
+    if (!this.muslimReferenceIndex) this.muslimReferenceIndex=this.createMuslimReferenceIndex(signal, offlineEnglish);
+    const index=await this.muslimReferenceIndex;
+    const id=index.get(key);
+    if (id === undefined) throw new AppError(`Canonical Sahih Muslim reference ${canonical} was not found.`, 'parse');
+    return id;
+  }
+
+  private async createMuslimReferenceIndex(signal: AbortSignal, offlineEnglish?: unknown): Promise<Map<string,number>> {
+    const raw=offlineEnglish ?? (await this.http.getJson<unknown>(`${BASE}/editions/eng-muslim.min.json`,signal)).json;
+    const root=raw && typeof raw==='object' ? raw as {hadiths?:unknown[]} : {};
+    const index=new Map<string,number>();
+    for (const value of root.hadiths ?? []) {
+      if (!value || typeof value !== 'object') continue;
+      const item=value as {hadithnumber?:unknown;arabicnumber?:unknown};
+      if (typeof item.hadithnumber !== 'number' || typeof item.arabicnumber !== 'string') continue;
+      const match=/^(\d+)(?:\.(\d+))?$/u.exec(item.arabicnumber.trim());
+      if (!match) continue;
+      const suffix=match[2] ? String.fromCharCode(96+Number(match[2])) : '';
+      if (suffix && (suffix < 'a' || suffix > 'z')) continue;
+      index.set(`${match[1]}${suffix}`,item.hadithnumber);
+    }
+    return index;
   }
 
   async fetchHadithRange(reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult[]> {

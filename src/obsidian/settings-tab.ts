@@ -166,6 +166,12 @@ export class FetcherSettingTab extends PluginSettingTab {
           this.renderAll();
         }));
     void this.renderHadithTranslationSelector(containerEl,this.plugin.pluginSettings.hadithProvider,token);
+    new Setting(containerEl)
+      .setName('Hadith link website')
+      .setDesc('Keep the original source URL, or use Sunnah.com / Hadith Hub for hadith-api and Hadith JSON. Verify that generated destination links open the intended Hadith. Hadith Unlocked keeps its native links.')
+      .addDropdown(dropdown=>dropdown.addOptions({provider:'Original provider URL',sunnah:'Sunnah.com',hadithhub:'Hadith Hub'})
+        .setValue(this.plugin.pluginSettings.hadithLinkDestination)
+        .onChange(async value=>{ this.plugin.pluginSettings.hadithLinkDestination=value as Settings['hadithLinkDestination']; await this.plugin.saveSettings(); }));
 
     new Setting(containerEl)
       .setName('Cache fetched content')

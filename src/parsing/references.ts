@@ -10,6 +10,23 @@ export interface ParsedHadithReference {
   complete: true;
 }
 
+/** Parse a comma-delimited Hadith expression without discarding order or repeats. */
+export function parseHadithReferences(input: string): HadithReference[] | null {
+  const value = normalizeInput(input);
+  const colon = value.indexOf(':');
+  if (colon <= 0) return null;
+  const collection = value.slice(0, colon).trim();
+  const values = value.slice(colon + 1).split(',');
+  if (!collection || !values.length || values.some(value => !value.trim())) return null;
+  const references: HadithReference[] = [];
+  for (const value of values) {
+    const parsed = parseHadithReference(`${collection}:${value.trim()}`);
+    if (!parsed) return null;
+    references.push(parsed);
+  }
+  return references;
+}
+
 const HADITH_ALIASES: Record<string, string> = {
   bukhari: 'bukhari',
   'sahih al-bukhari': 'bukhari',

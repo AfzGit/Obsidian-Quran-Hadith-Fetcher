@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseHadithReference, parseQuranReference } from '../../parsing/references';
+import { parseHadithReference, parseHadithReferences, parseQuranReference } from '../../parsing/references';
 import { validateQuranReference, validateHadithReference } from '../../parsing/validation';
 
 
@@ -23,6 +23,15 @@ test('Hadith references accept canonical provider collection IDs and Muslim suff
   assert.deepEqual(parseHadithReference('shamail:1'),{kind:'hadith',collectionId:'shamail',hadithNumber:1});
   assert.deepEqual(parseHadithReference('muslim:202a'),{kind:'hadith',collectionId:'muslim',hadithNumber:'202a'});
   assert.deepEqual(parseHadithReference('muslim:202A'),{kind:'hadith',collectionId:'muslim',hadithNumber:'202a'});
+});
+test('Hadith references parse comma-separated values and preserve duplicates',()=>{
+  assert.deepEqual(parseHadithReferences('muslim:202 - 205, 204a, 204'),[
+    {kind:'hadith',collectionId:'muslim',hadithNumber:202,endHadithNumber:205},
+    {kind:'hadith',collectionId:'muslim',hadithNumber:'204a'},
+    {kind:'hadith',collectionId:'muslim',hadithNumber:204},
+  ]);
+  assert.equal(parseHadithReferences('bukhari:202,,204'),null);
+  assert.equal(parseHadithReferences('bukhari:202-'),null);
 });
 test('validation rejects bad Quran ranges',()=>{assert.ok(validateQuranReference({kind:'quran',surah:0,startAyah:1,endAyah:1}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:999,endAyah:999}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:255,endAyah:254}));assert.ok(validateQuranReference({kind:'quran',surah:2,startAyah:255,endAyah:287}));});
 test('validation rejects unknown Hadith collection',()=>{assert.equal(validateHadithReference({kind:'hadith',collectionId:'nope',hadithNumber:1},[{id:'bukhari',name:'Bukhari',providerId:'x'}]),'Unknown collection.');});

@@ -7,6 +7,7 @@ export const COMMAND_DEFINITIONS = [
   { id:'set-quran-website', name:'Set Quran link website', defaultEnabled:false },
   { id:'set-hadith-provider', name:'Set Hadith content provider', defaultEnabled:false },
   { id:'set-hadith-translation', name:'Set Hadith translation', defaultEnabled:false },
+  { id:'set-hadith-website', name:'Set Hadith link website', defaultEnabled:false },
   { id:'manage-offline-databases', name:'Manage offline databases', defaultEnabled:false },
   { id:'check-provider-health', name:'Check provider health', defaultEnabled:true },
   { id:'normalize-salutations', name:'Normalize all salutations to ﷺ', defaultEnabled:true },

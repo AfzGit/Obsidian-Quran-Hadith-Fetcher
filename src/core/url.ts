@@ -28,3 +28,13 @@ export function makeQuranUrl(website: QuranWebsite, template:string, surah:numbe
     .replaceAll('$ayah', encodeURIComponent(String(ayah)));
 }
 export { QURAN_WEBSITES };
+
+export type HadithLinkDestination = 'provider'|'sunnah'|'hadithhub';
+const HADITH_SLUGS: Readonly<Record<string, string>> = { abudawud:'abudawud', ibnmajah:'ibnmajah', nasai:'nasai', tirmidhi:'tirmidhi', bukhari:'bukhari', muslim:'muslim', malik:'malik' };
+export function buildHadithSourceUrl(destination: HadithLinkDestination, collectionId: string, canonicalReference: string|number): string | undefined {
+  if (destination === 'provider') return undefined;
+  const slug = HADITH_SLUGS[collectionId.toLowerCase()];
+  if (!slug) return undefined;
+  const base = destination === 'sunnah' ? 'https://sunnah.com' : 'https://hadithhub.com';
+  return `${base}/${slug}:${encodeURIComponent(String(canonicalReference))}`;
+}

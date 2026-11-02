@@ -1,6 +1,6 @@
 import { DEFAULT_FORMATTING, type FormattingConfig } from '../core/formatting';
 import { DEFAULT_REPLACEMENT_RULES, type ReplacementRule } from '../core/normalization';
-import type { QuranWebsite } from '../core/url';
+import type { HadithLinkDestination, QuranWebsite } from '../core/url';
 import type { OutputOptions, QuranRangeMode } from '../domain/models';
 import { defaultCommandVisibility, type CommandVisibility } from '../core/commands';
 
@@ -13,6 +13,7 @@ export interface Settings {
   hadithLanguage:string;
   hadithTranslation:string;
   quranWebsite:QuranWebsite;
+  hadithLinkDestination:HadithLinkDestination;
   customQuranUrl:string;
   formatting:FormattingConfig;
   replacementRules:ReplacementRule[];
@@ -71,8 +72,8 @@ function mergeReplacementRules(raw: unknown, legacyRabbConversion?: boolean): Re
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  schemaVersion:14, quranProvider:'alquran-cloud', hadithProvider:'hadith-api',
-  quranLanguage:'en', quranTranslation:'hilali-khan', hadithLanguage:'en', hadithTranslation:'eng', quranWebsite:'quran-unlocked', customQuranUrl:'https://www.myquranwebsite.com/$surah/$ayah-$ayahlast',
+  schemaVersion:15, quranProvider:'alquran-cloud', hadithProvider:'hadith-api',
+  quranLanguage:'en', quranTranslation:'hilali-khan', hadithLanguage:'en', hadithTranslation:'eng', quranWebsite:'quran-unlocked', hadithLinkDestination:'provider', customQuranUrl:'https://www.myquranwebsite.com/$surah/$ayah-$ayahlast',
   formatting:{...DEFAULT_FORMATTING,showLink:true,quranAyahOpen:'{',quranAyahClose:'}',quranAyahStyle:'curly',callout:'quote',customCalloutType:''}, replacementRules:DEFAULT_REPLACEMENT_RULES.map(x=>({...x})),
   blessingNormalization:true, cacheEnabled:true, romanEnglish:true, raNormalization:false, textConversionsEnabled:true,
   quranFetchLimit:30, hadithFetchLimit:15, commandVisibility:defaultCommandVisibility(),
@@ -139,7 +140,8 @@ export function migrateSettings(raw:unknown):Settings {
     ? knownDefaults
     : { ...knownDefaults, ...normalizedCommandVisibility };
   return {
-    ...structuredClone(DEFAULT_SETTINGS), ...source, schemaVersion:14, quranProvider:legacyProviderDefaults && source.quranProvider==='quran-unlocked' ? 'alquran-cloud' : (typeof source.quranProvider==='string' && source.quranProvider.trim() ? source.quranProvider : DEFAULT_SETTINGS.quranProvider),
+    ...structuredClone(DEFAULT_SETTINGS), ...source, schemaVersion:15, quranProvider:legacyProviderDefaults && source.quranProvider==='quran-unlocked' ? 'alquran-cloud' : (typeof source.quranProvider==='string' && source.quranProvider.trim() ? source.quranProvider : DEFAULT_SETTINGS.quranProvider),
+    hadithLinkDestination:source.hadithLinkDestination === 'sunnah' || source.hadithLinkDestination === 'hadithhub' ? source.hadithLinkDestination : 'provider',
     replacementRules:mergeReplacementRules(source.replacementRules, _legacyRabbConversion),
     formatting:normalizeFormatting({...DEFAULT_FORMATTING,...source.formatting}),
     quranLanguage:typeof source.quranLanguage==='string'&&source.quranLanguage.trim()?source.quranLanguage:'en',

@@ -4,8 +4,9 @@ import { OperationManager } from './core/operation';
 import { errorToNotice, AppError } from './core/errors';
 import { DEFAULT_FORMATTING, formatHadith, formatHadithRange, formatQuran } from './core/formatting';
 import { normalizeBlessing, normalizeStandaloneRa, transformFetchedEnglishText, transformFetchedArabicText } from './core/normalization';
-import { makeQuranUrl, validateTemplate } from './core/url';
-import { parseHadithReference, parseQuranReference } from './parsing/references';
+import { buildHadithSourceUrl, makeQuranUrl, validateTemplate } from './core/url';
+import { fetchHadithReferences } from './core/hadith-references';
+import { parseHadithReferences, parseQuranReference } from './parsing/references';
 import { validateHadithReference, validateQuranReference } from './parsing/validation';
 import { ProviderRegistry } from './providers/registry';
 import { QuranUnlockedProvider } from './providers/quran-unlocked/provider';
@@ -174,6 +175,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       case 'set-quran-website': return this.pickQuranWebsite();
       case 'set-hadith-provider': return this.pickHadithProvider();
       case 'set-hadith-translation': return this.pickHadithTranslation();
+      case 'set-hadith-website': return this.pickHadithWebsite();
       case 'manage-offline-databases': return this.openOfflineDatabaseManager();
       case 'check-provider-health': { await this.showProviderHealth(); return; }
       case 'normalize-salutations': return this.normalizeSelectedText('salutation');
@@ -257,6 +259,13 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         await this.saveSettings();
       },'Select Hadith translation').open();
     } catch(error) { new Notice(errorToNotice(error)); }
+  }
+
+  private async pickHadithWebsite():Promise<void> {
+    new ChoiceModal(this.app, [{id:'provider' as const,label:'Original provider URL'},{id:'sunnah' as const,label:'Sunnah.com'},{id:'hadithhub' as const,label:'Hadith Hub'}], item=>item.label, async item=>{
+      this.pluginSettings.hadithLinkDestination=item.id;
+      await this.saveSettings();
+    }, 'Select Hadith link website').open();
   }
 
   private async openOfflineDatabaseManager():Promise<void> {
@@ -401,15 +410,15 @@ export default class QuranHadithFetcherPlugin extends Plugin {
    */
   private async insertHadith(editor:Editor):Promise<void> {
     const operation = this.operations.begin();
-    const selectedRef = parseHadithReference(editor.getSelection());
-    if (selectedRef) {
+    const selectedRefs = parseHadithReferences(editor.getSelection());
+    if (selectedRefs) {
       const provider=this.registry.getHadith(this.pluginSettings.hadithProvider);
       try {
         const collections=await provider.listCollections({signal:operation.signal});
-        const error=validateHadithReference(selectedRef,collections,this.pluginSettings.hadithFetchLimit);
+        const error=selectedRefs.map(ref=>validateHadithReference(ref,collections)).find((value): value is string => value !== null);
         if(error){new Notice(`ERROR: ${error}`);return;}
       } catch(error) { new Notice(errorToNotice(error)); return; }
-      await this.chooseHadithOptions(editor, selectedRef, operation.id, operation.signal);
+      await this.chooseHadithOptions(editor, selectedRefs, operation.id, operation.signal);
       return;
     }
     const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
@@ -425,18 +434,17 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     }
     new CollectionModal(this.app, collections, collection => {
       const isMuslim = collection.id.toLowerCase() === 'muslim';
-      const placeholder = isMuslim ? 'e.g. 202 or 202a' : 'e.g. 1 or 1-5';
+      const placeholder = isMuslim ? 'e.g. 202, 204a or 202-205,204' : 'e.g. 1, 5, 10-15';
       new InputModal(this.app, `${collection.name} — Hadith`, placeholder, '', async value => {
         const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
-        const ref=parseHadithReference(`${collection.id}:${normalized}`);
-        if(!ref)return;
-        await this.chooseHadithOptions(editor, ref, operation.id, operation.signal, collections);
+        const refs=parseHadithReferences(`${collection.id}:${normalized}`);
+        if(!refs)return;
+        await this.chooseHadithOptions(editor, refs, operation.id, operation.signal, collections);
       }, () => this.operations.cancel(), value => {
         const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
-        const pattern=isMuslim ? /^\d{1,6}[a-z]?(?:-\d{1,6}[a-z]?)?$/iu : /^\d{1,6}(?:-\d{1,6})?$/u;
-        if(!pattern.test(normalized)) return isMuslim ? 'Enter a Hadith number such as 202 or 202a.' : 'Enter a Hadith number or range, e.g. 1 or 1-5.';
-        const ref=parseHadithReference(`${collection.id}:${normalized}`);
-        return ref ? validateHadithReference(ref,collections,this.pluginSettings.hadithFetchLimit) : 'Invalid Hadith/range.';
+        const refs=parseHadithReferences(`${collection.id}:${normalized}`);
+        if(!refs) return 'Enter numbers, ranges, or comma-separated references (e.g. 1-5,10).';
+        return refs.map(ref=>validateHadithReference(ref,collections)).find((value): value is string => value !== null) ?? null;
       }, 'text').open();
     }, offlineCollectionIds).open();
   }
@@ -456,14 +464,14 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     return ids;
   }
 
-  private async chooseHadithOptions(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, knownCollections?:CollectionDefinition[], initialOptions:OutputOptions=this.pluginSettings.lastHadithOptions) {
+  private async chooseHadithOptions(editor:Editor, refs:readonly import('./domain/models').HadithReference[], id:number, signal:AbortSignal, knownCollections?:CollectionDefinition[], initialOptions:OutputOptions=this.pluginSettings.lastHadithOptions) {
     const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
     let collections = knownCollections;
     if (!collections) {
       try { collections = await provider.listCollections({signal}); }
       catch (error) { new Notice(errorToNotice(error)); return; }
     }
-    const error = validateHadithReference(ref, collections, this.pluginSettings.hadithFetchLimit);
+    const error = refs.map(ref=>validateHadithReference(ref, collections)).find((value): value is string => value !== null);
     if (error) { new Notice(`ERROR: ${error}`); return; }
     new OptionsModal(
       this.app,
@@ -473,25 +481,21 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         english:provider.capabilities.englishTranslation,
         // Bukhari and Muslim receive a default Sahih grade when the provider omits one.
         // Keep that fallback user-controlled even for providers without grade metadata.
-        grading:provider.capabilities.grading || ['bukhari','muslim'].includes(ref.collectionId.toLowerCase()),
+        grading:provider.capabilities.grading || refs.some(ref=>['bukhari','muslim'].includes(ref.collectionId.toLowerCase())),
         isnad:provider.metadata.id === 'hadith-unlocked',
       },
-      async options => { await this.saveLastOptions('hadith', options); await this.fetchAndInsertHadith(editor, ref, id, signal, options, collections); },
+      async options => { await this.saveLastOptions('hadith', options); await this.fetchAndInsertHadith(editor, refs, id, signal, options, collections); },
       () => this.operations.cancel(),
     ).open();
   }
 
-  private async fetchAndInsertHadith(editor:Editor, ref:Exclude<ReturnType<typeof parseHadithReference>,null>, id:number, signal:AbortSignal, opts:OutputOptions = this.pluginSettings.lastHadithOptions, collections?:CollectionDefinition[]) {
+  private async fetchAndInsertHadith(editor:Editor, refs:readonly import('./domain/models').HadithReference[], id:number, signal:AbortSignal, opts:OutputOptions = this.pluginSettings.lastHadithOptions, collections?:CollectionDefinition[]) {
     try {
       const provider = this.registry.getHadith(this.pluginSettings.hadithProvider);
       const translations = await provider.listTranslations({signal});
       const translation = translations.find(t => t.id === this.pluginSettings.hadithTranslation && t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === this.pluginSettings.hadithTranslation) ?? translations.find(t => t.language.toLowerCase() === this.pluginSettings.hadithLanguage.toLowerCase()) ?? translations.find(t => t.id === 'eng') ?? translations[0];
       if(!translation) throw new AppError('No Hadith translation is configured for this provider.','validation');
-      const end=ref.endHadithNumber ?? ref.hadithNumber;
-      if(typeof ref.hadithNumber === 'number' && typeof end === 'number' && end - ref.hadithNumber + 1 > this.pluginSettings.hadithFetchLimit) {
-        throw new AppError(`Hadith fetch limit is ${this.pluginSettings.hadithFetchLimit} hadiths.`,'validation');
-      }
-      const results = await provider.fetchHadithRange(ref, translation, {signal});
+      const results = await fetchHadithReferences(provider, refs, translation, {signal}, this.pluginSettings.hadithFetchLimit);
       if (!this.operations.isCurrent(id)) return;
       const { normalizeArabic, normalizeEnglish } = createNormalizers(this.pluginSettings);
       const transformed:HadithResult[]=results.map(result=>{
@@ -502,6 +506,10 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         if (item.englishIsnad) item.englishIsnad=normalizeEnglish(item.englishIsnad);
         if (item.english) item.english=normalizeEnglish(item.english);
         item.grades=item.grades.map(g=>({...g,text:normalizeEnglish(g.text)}));
+        if ((provider.metadata.id === 'hadith-api' || provider.metadata.id === 'hadith-json') && this.pluginSettings.hadithLinkDestination !== 'provider') {
+          const link=buildHadithSourceUrl(this.pluginSettings.hadithLinkDestination,item.reference.collectionId,item.reference.hadithNumber);
+          if(link) item.source.sourceUrl=link;
+        }
         return item;
       });
       const markdown=transformed.length===1
@@ -511,7 +519,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         this.app,
         markdown,
         edited => { if (this.operations.isCurrent(id)) editor.replaceRange(edited, editor.getCursor()); },
-        () => { if (this.operations.isCurrent(id)) void this.chooseHadithOptions(editor,ref,id,signal,collections,opts); },
+        () => { if (this.operations.isCurrent(id)) void this.chooseHadithOptions(editor,refs,id,signal,collections,opts); },
       ).open();
     } catch (error) {
       if (!this.operations.isCurrent(id)) return;

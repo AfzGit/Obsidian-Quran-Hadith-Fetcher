@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.8
+
+- Added comma-separated Hadith references and mixed range support while preserving the requested order and duplicates.
+- Standardized Sahih Muslim number-letter resolution for hadith-api and Hadith JSON, and stopped Hadith Unlocked's redirect fallback from expanding indefinitely.
+- Added configurable Hadith link destinations, retaining the original provider URL by default with optional Sunnah.com and Hadith Hub links.
+- Added a reminder to verify destination links point to the intended Hadith.
+
 ## 1.0.7
 
 - Added screenshots of the main workflows to the README, including command, provider, offline database and text conversion settings.

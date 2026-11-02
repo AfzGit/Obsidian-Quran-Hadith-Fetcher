@@ -33,9 +33,9 @@ function gradesFromHadith(...hadiths: Array<ApiHadith|undefined>): HadithGrade[]
   return out;
 }
 
-export function parseHadithApiResponse(arabicRaw: unknown, englishRaw: unknown, reference: HadithReference, collectionName: string, providerId: string, translation?: TranslationDefinition): HadithResult {
-  const arHadith = selectHadith(arabicRaw, reference.hadithNumber);
-  const enHadith = selectHadith(englishRaw, reference.hadithNumber);
+export function parseHadithApiResponse(arabicRaw: unknown, englishRaw: unknown, reference: HadithReference, collectionName: string, providerId: string, translation?: TranslationDefinition, providerNumber: number|string = reference.hadithNumber): HadithResult {
+  const arHadith = selectHadith(arabicRaw, providerNumber);
+  const enHadith = selectHadith(englishRaw, providerNumber);
   const ar = arHadith?.text;
   const grades = gradesFromHadith(enHadith, arHadith);
   const result: HadithResult = { kind:'hadith', reference, collectionName, grades, source: { providerId, providerName: providerId, sourceUrl: `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${translation?.id ?? 'eng'}-${reference.collectionId}/${reference.hadithNumber}.min.json`, retrievedAt: new Date().toISOString(), collectionId: reference.collectionId, collectionName } };

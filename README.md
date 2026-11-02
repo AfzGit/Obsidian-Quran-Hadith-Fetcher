@@ -20,7 +20,7 @@ Run these commands in the command palette (`Ctrl-p`)
 | Command      | Description                                    |
 | ------------ | ---------------------------------------------- |
 | Fetch Quran  | Get Quranic Ayaat. Supports ranges like 10-15. |
-| Fetch Hadith | Get Ahadith. Also supports ranges.             |
+| Fetch Hadith | Get Ahadith. Supports numbers, ranges, and comma-separated references. |
 
 > Fetching is limited to 30 Ayaat and 15 Ahadith to prevent accidental fetches and resource usage. These can easily be modified in the settings.
 
@@ -59,6 +59,7 @@ Run these commands in the command palette (`Ctrl-p`)
 ## Command: Fetch Ahadith
 
 - **Select a Hadith Book**: Choose from a list of Ahadith books (according to the provider set in settings).
+- **Enter references**: Use a number (`202`), range (`202-205`), or a comma-separated combination (`202-205,300`). For Sahih Muslim, `204a` selects exactly that narration while a bare `204` expands consecutive lettered narrations when the selected provider exposes them.
 - **Fetch Specific Ayat**: Input a single or multiple Ahadith (e.g., `5` or `5-10`)
 - **Customize Content**: Toggle Arabic text, English translation, embedded links, and Grading.
 
@@ -83,10 +84,11 @@ These commands can be enabled from the settings
 | `Set Quran link website`                                               | Configure the website used when embedding website link in fetched Ayaat                                                                         |
 | `Set Hadith translation`                                               | Set the default translation for Hadith text.                                                                                                    |
 | `Set Quran translation language`                                       | Select the primary language for Quran translations.                                                                                             |
+| `Set Hadith link website`                                              | Keep the original provider URL, or choose Sunnah.com or Hadith Hub for hadith-api and Hadith JSON links.                                     |
 
 # Settings and commands
 
-Settings include provider and translation selection, Quran link destination, formatting, text conversions, range limits, cache control, provider health checks, offline database management, and command-palette visibility.
+Settings include provider and translation selection, Quran and Hadith link destinations, formatting, text conversions, range limits, cache control, provider health checks, offline database management, and command-palette visibility.
 
 The two fetch commands and provider health check are enabled by default, along with salutation normalization. Other provider-selection, offline-management, and conversion commands are available in the command palette and can be enabled or disabled in **Command palette commands**.
 
@@ -134,7 +136,7 @@ Text conversions run on fetched text before formatting. Settings can normalize c
 
 The **Normalize all salutations to ﷺ** and **Convert Variants of RA…** commands operate on the current editor selection, or on the current line when there is no selection. They do not process the entire note automatically.
 
-Quran links use a selectable destination (Quran Unlocked, Quran.com, QuranWBW, or a custom template). Custom templates accept `$surah`, `$ayah`, and `$ayahlast`; `$surah` is required. Hadith links use the selected provider's source URL.
+Quran links use a selectable destination (Quran Unlocked, Quran.com, QuranWBW, or a custom template). Custom templates accept `$surah`, `$ayah`, and `$ayahlast`; `$surah` is required. Hadith links retain their provider URL by default. For hadith-api and Hadith JSON, users can instead select Sunnah.com or Hadith Hub; Hadith Unlocked retains its native source URL. When using a destination link, verify that it opens the intended Hadith before relying on it in notes or research.
 
 > Multiple spaces are converted into a single space automatically
 
