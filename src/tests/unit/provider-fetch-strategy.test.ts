@@ -155,6 +155,7 @@ test('Hadith JSON keeps only a bounded number of full books in memory',async()=>
     getText:async()=>({status:200,text:'',headers:{}}),
     getJson:async<T>(url:string)=>{
       calls++;
+      if(url.endsWith('/eng-muslim.min.json')) return {status:200,json:{hadiths:[{arabicnumber:'1',reference:{hadith:1}}]},headers:{}} as {status:number;json:T;headers:Record<string,string>};
       const book=url.split('/').at(-1)?.replace('.json','') ?? 'book';
       return {status:200,json:[{id:1,idInBook:1,arabic:book,english:{text:book}}],headers:{}} as {status:number;json:T;headers:Record<string,string>};
     },
@@ -162,11 +163,11 @@ test('Hadith JSON keeps only a bounded number of full books in memory',async()=>
   const provider=new HadithJsonProvider(http,()=>true,undefined,persistent);
   const translation={id:'en',language:'en',name:'English',providerId:'hadith-json'};
   for(const id of ['bukhari','muslim','abudawud','tirmidhi']) await provider.fetchHadith({kind:'hadith',collectionId:id,hadithNumber:1},translation,{signal:signal()});
-  assert.equal(calls,4);
+  assert.equal(calls,5);
   await provider.fetchHadith({kind:'hadith',collectionId:'bukhari',hadithNumber:1},translation,{signal:signal()});
   // Bukhari is the least-recently-used book after four distinct books, so it is read from
   // the persistent cache rather than forcing another network download.
-  assert.equal(calls,4);
+  assert.equal(calls,5);
 });
 
 test('Hadith JSON persistent book cache survives provider recreation',async()=>{

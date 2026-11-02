@@ -65,6 +65,16 @@ test('Hadith Unlocked JSON parser does not leak surrounding/similar hadiths',()=
 
 test('hadith-api fixture parser handles missing optional grade',()=>{const r=parseHadithApiResponse({hadiths:[{hadithnumber:1,text:'عربي'}]},{hadiths:[{hadithnumber:1,text:'English'}]},{kind:'hadith',collectionId:'bukhari',hadithNumber:1},'Bukhari','hadith-api');assert.equal(r.arabic,'عربي');assert.equal(r.english,'English');assert.deepEqual(r.grades,[]);});
 
+test('Hadith API preserves a newline-separated English narrator',()=>{
+  const r=parseHadithApiResponse(
+    {hadiths:[{hadithnumber:'204a',text:'AR'}]},
+    {hadiths:[{hadithnumber:'204a',text:'Abu Huraira reported:\nWhen this Ayah was revealed.'}]},
+    {kind:'hadith',collectionId:'muslim',hadithNumber:'204a'},'Sahih Muslim','hadith-api'
+  );
+  assert.equal(r.englishIsnad,'Abu Huraira reported:');
+  assert.equal(r.english,'When this Ayah was revealed.');
+});
+
 
 test('Hadith Unlocked parser preserves the Arabic isnad separately from the matn',()=>{
   const raw=[{ref:'bukhari:200',num:200,isnad_ar:'حَدَّثَنَا مُسَدَّدٌ قَالَ حَدَّثَنَا حَمَّادٌ عَنْ ثَابِتٍ عَنْ أَنَسٍ',body:'أَنَّ النَّبِيَّ ﷺ دَعَا بِإِنَاءٍ مِنْ مَاءٍ',body_en:'The Prophet ﷺ asked for water.'}];

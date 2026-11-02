@@ -145,8 +145,11 @@ export class HadithApiProvider implements HadithProvider {
     }
     if (!collection) throw new AppError('Unknown collection.', 'validation');
 
-    const providerNumber = reference.collectionId === 'muslim' && typeof reference.hadithNumber === 'string'
-      ? await this.resolveMuslimProviderNumber(reference.hadithNumber, ctx.signal, en?.json)
+    // Fawaz's top-level Muslim numbers are an internal sequence.  Apply the
+    // canonical-reference crosswalk for bare numbers as well as lettered ones:
+    // e.g. canonical Muslim 203 is provider record 500, not record 203.
+    const providerNumber = reference.collectionId === 'muslim'
+      ? await this.resolveMuslimProviderNumber(String(reference.hadithNumber), ctx.signal, en?.json)
       : reference.hadithNumber;
     const arabicEdition = collection.arabicEdition;
     const englishEdition = `${translation.id}-${reference.collectionId}`;

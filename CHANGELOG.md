@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.11
+
+- Fixed canonical Sahih Muslim references in hadith-api and Hadith JSON, including bare number references and Hadith JSON ranges.
+- Preserved Hadith API's newline-separated English narrator so it is inserted on its own quoted line.
+
 ## 1.0.10
 
 - Fixed Sahih Muslim range retrieval when hadith-api's CDN rejects the large reference metadata file.

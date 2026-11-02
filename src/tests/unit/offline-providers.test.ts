@@ -314,6 +314,21 @@ test('Hadith API offline fetch does not require the editions catalog',async()=>{
   assert.deepEqual(calls,[]);
 });
 
+test('Hadith API resolves a bare Sahih Muslim reference through the canonical crosswalk',async()=>{
+  const http:HttpClient={
+    getText:async()=>({status:200,text:'',headers:{}}),
+    getJson:async()=>{throw new Error('network should not be used');},
+  };
+  const offline=new FakeOfflineStore(new Map([
+    ['hadith-api:muslim:eng:arabic',{hadiths:[{hadithnumber:500,arabicnumber:'203',text:'CORRECT ARABIC',grades:[]}]}],
+    ['hadith-api:muslim:eng:translation',{hadiths:[{hadithnumber:500,arabicnumber:'203',text:'CORRECT ENGLISH',grades:[]}]}],
+  ]));
+  const provider=new HadithApiProvider(http,()=>false,offline);
+  const result=await provider.fetchHadith({kind:'hadith',collectionId:'muslim',hadithNumber:203},{id:'eng',language:'en',name:'English',providerId:'hadith-api'},{signal:abortSignal()});
+  assert.equal(result.arabic,'CORRECT ARABIC');
+  assert.equal(result.english,'CORRECT ENGLISH');
+});
+
 
 test('Hadith API falls back to English translation metadata when edition metadata is unavailable',async()=>{
   const http:HttpClient={
@@ -345,6 +360,23 @@ test('Hadith JSON uses idInBook before global id when selecting a book reference
   );
   assert.equal(result.arabic,'RIGHT');
   assert.equal(result.english,'RIGHT EN');
+});
+
+test('Hadith JSON resolves a bare Sahih Muslim reference through the canonical crosswalk',async()=>{
+  const http:HttpClient={
+    getText:async()=>({status:200,text:'',headers:{}}),
+    getJson:async<T>(url:string)=>{
+      assert.match(url,/eng-muslim\.min\.json$/u);
+      return {status:200,json:{hadiths:[{arabicnumber:'203',reference:{hadith:406}}]},headers:{}} as {status:number;json:T;headers:Record<string,string>};
+    },
+  };
+  const offline=new FakeOfflineStore(new Map([
+    ['hadith-json:muslim:book',[{id:203,idInBook:406,arabic:'CORRECT ARABIC',english:{narrator:'',text:'CORRECT ENGLISH'}}]],
+  ]));
+  const provider=new HadithJsonProvider(http,()=>false,offline);
+  const result=await provider.fetchHadith({kind:'hadith',collectionId:'muslim',hadithNumber:203},{id:'en',language:'en',name:'English',providerId:'hadith-json'},{signal:abortSignal()});
+  assert.equal(result.arabic,'CORRECT ARABIC');
+  assert.equal(result.english,'CORRECT ENGLISH');
 });
 
 test('Hadith JSON exposes all 17 books from the pinned v1.2.0 dataset',async()=>{

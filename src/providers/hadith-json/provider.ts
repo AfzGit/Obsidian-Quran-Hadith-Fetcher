@@ -77,13 +77,18 @@ export class HadithJsonProvider implements HadithProvider{
     const end=reference.endHadithNumber??reference.hadithNumber;
     if(end===reference.hadithNumber){
       const data=await this.loadBook(collection.id,ctx);
-      return [this.parseFromBook(reference,collection,translation,data)];
+      const providerNumber=await this.resolveMuslimReference(reference,data,ctx);
+      return [this.parseFromBook(reference,collection,translation,data,providerNumber)];
     }
     if(typeof reference.hadithNumber!=='number'||typeof end!=='number')throw new AppError('Alphabetic Hadith ranges are not supported.','validation');
     if(end<reference.hadithNumber)throw new AppError('Hadith range end must not be before its start.','validation');
     const data=await this.loadBook(collection.id,ctx);
     const results:HadithResult[]=[];
-    for(let number=reference.hadithNumber;number<=end;number++)results.push(this.parseFromBook({kind:'hadith',collectionId:collection.id,hadithNumber:number},collection,translation,data));
+    for(let number=reference.hadithNumber;number<=end;number++){
+      const item={kind:'hadith',collectionId:collection.id,hadithNumber:number} as HadithReference;
+      const providerNumber=await this.resolveMuslimReference(item,data,ctx);
+      results.push(this.parseFromBook(item,collection,translation,data,providerNumber));
+    }
     return results;
   }
   private getCollection(id:string):CollectionDefinition{const collection=COLLECTIONS.find(c=>c.id===id);if(!collection)throw new AppError('Unknown collection.','validation');return collection;}
@@ -145,9 +150,12 @@ export class HadithJsonProvider implements HadithProvider{
   }
 
   private async resolveMuslimReference(reference:HadithReference,data:unknown,ctx:FetchContext):Promise<HadithReference['hadithNumber']>{
-    if(reference.collectionId!=='muslim' || typeof reference.hadithNumber!=='string') return reference.hadithNumber;
+    // Hadith JSON's Muslim IDs are its in-book sequence, not the canonical
+    // sunnah.com-style number. This is true for bare references (203) too.
+    if(reference.collectionId!=='muslim') return reference.hadithNumber;
     if(!this.muslimCanonicalIndex) this.muslimCanonicalIndex=this.loadMuslimCanonicalIndex(ctx);
-    const providerId=(await this.muslimCanonicalIndex).get(reference.hadithNumber.toLowerCase());
+    const canonical=String(reference.hadithNumber).toLowerCase();
+    const providerId=(await this.muslimCanonicalIndex).get(canonical);
     if(providerId===undefined) throw new AppError(`Canonical Sahih Muslim reference ${reference.hadithNumber} was not found.`,'parse');
     if(!this.indexBook('muslim',data).has(String(providerId))) throw new AppError(`Hadith JSON has no verified crosswalk for Sahih Muslim ${reference.hadithNumber}.`,'parse');
     return providerId;

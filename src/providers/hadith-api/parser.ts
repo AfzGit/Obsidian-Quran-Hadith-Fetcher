@@ -8,6 +8,16 @@ function gradeKey(value: string): string { return value.normalize('NFKC').replac
 function str(value: unknown): string | undefined { return typeof value === 'string' && value.trim() ? value.trim() : undefined; }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
 
+function splitEnglishIsnad(text: string | undefined): { isnad?: string; text?: string } {
+  if (!text) return {};
+  // Hadith API separates some English narrators from the translated matn with
+  // a newline. Keep it as a separate result field so both lines get Markdown
+  // quote prefixes instead of being collapsed into one sentence on insertion.
+  const match = /^([^\r\n]+:\s*)\r?\n+([\s\S]+)$/u.exec(text);
+  if (!match) return { text };
+  return { isnad: match[1]!.trim(), text: match[2]!.trim() || undefined };
+}
+
 function normalizeGrades(value: unknown): Array<{name?: string; grade?: string}> {
   if (!Array.isArray(value)) return [];
   return value.flatMap((g) => {
@@ -40,7 +50,9 @@ export function parseHadithApiResponse(arabicRaw: unknown, englishRaw: unknown, 
   const grades = gradesFromHadith(enHadith, arHadith);
   const result: HadithResult = { kind:'hadith', reference, collectionName, grades, source: { providerId, providerName: providerId, sourceUrl: `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${translation?.id ?? 'eng'}-${reference.collectionId}/${reference.hadithNumber}.min.json`, retrievedAt: new Date().toISOString(), collectionId: reference.collectionId, collectionName } };
   if (ar) result.arabic = ar;
-  if (enHadith?.text) result.english = enHadith.text;
+  const english = splitEnglishIsnad(enHadith?.text);
+  if (english.isnad) result.englishIsnad = english.isnad;
+  if (english.text) result.english = english.text;
   return result;
 }
 
