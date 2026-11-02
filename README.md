@@ -182,8 +182,10 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 - [ ] Display better error messages if Hadith is not found
 - [ ] Make Database Installations async
 - [ ] Expand salutations scope like: `(May the peace and blessing of Allah be upon him)`
-- [ ] Options to replace hadithjson replacements with Sunnah.com links
-	- [ ] Possibly even replace hadith-api branding with Sunnah.com like "Sunnah.com (via Hadith-API)"
+- [ ] Options to replace HadithJSON replacements with Sunnah.com links
+	- [ ] Possibly even replace HadithJSON branding with Sunnah.com like "Sunnah.com (via HadithJSON)"
+	- [ ] Make the inserted link for HadithJSON use Sunnah.com url instead.
+	- [ ] HadithJSON uses "in-book reference" of Sunnah.com instead of the standard letter based numbering. Put a disclaimer for this when fetching hadith from Muslim using HadithJSON.
 
 # License
 
