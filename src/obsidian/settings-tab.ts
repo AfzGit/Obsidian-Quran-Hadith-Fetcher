@@ -370,6 +370,13 @@ export class FetcherSettingTab extends PluginSettingTab {
   }
 
   private renderFormattingSection(containerEl:HTMLElement):void {
+    new Setting(containerEl)
+      .setName('Use traditional Hadith terminology')
+      .setDesc('Display Sahih, Hasan, and Isnaad instead of Sound, Good, and Chain. Enabled by default.')
+      .addToggle(t=>t.setValue(this.plugin.pluginSettings.formatting.traditionalHadithTerms).onChange(async v=>{
+        this.plugin.pluginSettings.formatting.traditionalHadithTerms=v;
+        await this.plugin.saveSettings();
+      }));
     new Setting(containerEl).setName('Use Arabic-Indic ayah numbers').setDesc('Show Quran ayah numbers with Arabic-Indic digits (١، ٢، ٣) instead of Western digits (1, 2, 3) in inserted output.')
       .addToggle(t=>t.setValue(this.plugin.pluginSettings.formatting.arabicAyahNumbers).onChange(async v=>{
         this.plugin.pluginSettings.formatting.arabicAyahNumbers=v;

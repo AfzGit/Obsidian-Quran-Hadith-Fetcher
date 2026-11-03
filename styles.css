@@ -9,6 +9,11 @@
  * inside the corresponding modal.
  */
 .qhf-modal-actions { display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1rem; }
+.qhf-reference-input-setting { flex-wrap:wrap; }
+.qhf-reference-input-setting .setting-item-info { flex:0 0 100%; padding:0 0 0.45rem; }
+.qhf-reference-input-setting .setting-item-control { flex:1 1 100%; }
+.qhf-reference-input-setting input { width:100%; }
+.qhf-input-warning { margin:0 0 0.75rem; }
 .qhf-invalid { border-color:var(--background-modifier-error); }
 
 .qhf-preview-modal { width: min(92vw, 1000px); }

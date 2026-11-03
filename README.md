@@ -59,7 +59,7 @@ Run these commands in the command palette (`Ctrl-p`)
 ## Command: Fetch Ahadith
 
 - **Select a Hadith Book**: Choose from a list of Ahadith books (according to the provider set in settings). The list uses stable two-digit prefixes—such as `01` Bukhari and `02` Muslim—so a collection keeps the same position across providers that offer it.
-- **Enter references**: Use a number (`202`), range (`202-205`), or a comma-separated combination (`202-205,300`). For Sahih Muslim, `204a` selects exactly that narration while a bare `204` expands consecutive lettered narrations when the selected provider exposes them.
+- **Enter references**: Use a number (`202`), range (`202-205`), or a comma-separated combination (`202-205,300`). For Sahih Muslim, `204a` selects exactly that narration while a bare `204` expands consecutive lettered narrations when the selected provider exposes them. hadith-api and Hadith JSON can also use their internal Muslim numbering through **Use in-book reference** in the reference modal; those entries retain their provider link rather than a destination-site link.
 - **Fetch Specific Ayat**: Input a single or multiple Ahadith (e.g., `5` or `5-10`)
 - **Customize Content**: Toggle Arabic text, English translation, embedded links, and Grading.
 
@@ -108,7 +108,7 @@ Quran and Hadith providers are selected independently in **Settings → Provider
 | Hadith | [Hadith Unlocked](https://hadithunlocked.com)                       | Its supported collection catalog and English translation.                                                         |
 | Hadith | [Hadith JSON](https://github.com/AhmedBaset/hadith-json)            | 17 books from the pinned `hadith-json` v1.2.0 dataset, with Arabic and English text. Uses [Sunnah.com](https://www.sunnah.com) data (e.g., using 204a for Sahih Muslim)                              |
 
-Providers may differ in the collections, translations, grading, source links, and offline data they expose. The plugin does not guarantee that every number exists in every provider's version of a collection; the provider response is authoritative for an individual Hadith number.
+Providers may differ in the collections, translations, grading, source links, and offline data they expose. The plugin does not guarantee that every number exists in every provider's version of a collection; the provider response is authoritative for an individual Hadith number. If a Hadith is unavailable, the error identifies the collection and reference and, for Sahih Muslim, reminds you to check whether canonical or in-book numbering is appropriate. Hadith JSON's Ibn Majah numbering is corrupted; use hadith-api or Hadith Unlocked for Ibn Majah.
 
 New installs use Al Quran Cloud and hadith-api. English is the default translation language; Hilali-Khan is preferred for Quran where available. Fetch options start with Arabic, English, and links enabled; Hadith grading is enabled by default. Output uses an Obsidian Quote callout unless changed in formatting settings.
 
@@ -130,7 +130,7 @@ Most provider result caches are bounded, in-memory caches and can be disabled in
 
 ## Output and text conversions
 
-Each fetch lets you choose Arabic text, English text, links, and Hadith grading where available. Bukhari and Muslim also show a grading toggle for the default “Sahih” grade used when a provider supplies no grade, so you can hide or include that fallback. Quran ranges can be displayed line by line, merged, alternating Arabic and English, or as numbered lines; Quran footnotes can also be included (Quran Unlocked only). Hadith output can separate the chain of narration (Isnad) from the text; Hadith API narrator labels such as `Narrated Abu Musa:` and `Abu Huraira reported:` are also rendered on their own quoted line. Formatting settings control callouts, prefixes/suffixes, text surroundings, ayah-number styles, and code-syntax handling.
+Each fetch lets you choose Arabic text, English text, links, and Hadith grading where available. Bukhari and Muslim also show a grading toggle for the default “Sahih” grade used when a provider supplies no grade, so you can hide or include that fallback. Quran ranges can be displayed line by line, merged, alternating Arabic and English, or as numbered lines; Quran footnotes can also be included (Quran Unlocked only). Hadith output can separate the chain of narration (Isnaad) from the text; hadith-api English text with a colon immediately followed by text is split onto its own quoted line. Formatting settings include a default-on traditional terminology option for Sahih, Hasan, and Isnaad.
 
 Text conversions run on fetched text before formatting. Settings can normalize common ﷺ salutations, convert variants of the Sahaba honorific, simplify selected transliteration marks, and apply enabled English replacement rules in their configured order. The Quran Arabic text path only applies the Arabic salutation normalization; English replacement rules are not applied to Arabic text. Conversions can be disabled with the master **Toggle Text Conversions** setting or command.
 
@@ -180,14 +180,8 @@ The plugin uses Obsidian's APIs for HTTP and vault storage.
 # Roadmap
 
 - [ ] Add option to change provider in output options
-- [ ] Add comma separated fetching support (e.g., [202-204, 300, 100-105])
-- [ ] Display better error messages if Hadith is not found
+- [x] Display better error messages if Hadith is not found
 - [ ] Make Database Installations async
-- [ ] Expand salutations scope like: `(May the peace and blessing of Allah be upon him)`
-- [ ] HadithJSON uses "in-book reference" of Sunnah.com instead of the standard letter based numbering. Put a disclaimer for this when fetching hadith from Muslim using HadithJSON.
-- [ ] Standardize Muslim to use the letter number format (e.g., 204a)
-	- [ ] once standardized, enable `https://hadithhub.com/` links to be inserted instead of the source links, like `https://hadithhub.com/muslim:204a?lang=en%2Car`
-- [ ] instead of `Sound`, `Good`, and `Chain`, give the option in settings to instead use `Sahih`, `Hasan`, and `Isnaad` respectively. this should be enabled by default
 
 # License
 

@@ -85,6 +85,16 @@ test('Hadith API separates an inline English narrator label',()=>{
   assert.equal(r.english,'A man came to the Prophet.');
 });
 
+test('Hadith API splits any colon immediately followed by text',()=>{
+  const r=parseHadithApiResponse(
+    {hadiths:[{hadithnumber:125,text:'AR'}]},
+    {hadiths:[{hadithnumber:125,text:'A companion said:The Prophet answered.'}]},
+    {kind:'hadith',collectionId:'bukhari',hadithNumber:125},'Sahih Al-Bukhari','hadith-api'
+  );
+  assert.equal(r.englishIsnad,'A companion said:');
+  assert.equal(r.english,'The Prophet answered.');
+});
+
 test('Hadith API preserves ordinary colons in English text',()=>{
   const r=parseHadithApiResponse(
     {hadiths:[{hadithnumber:124,text:'AR'}]},

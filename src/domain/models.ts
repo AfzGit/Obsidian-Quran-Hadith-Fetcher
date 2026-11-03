@@ -43,6 +43,8 @@ export interface HadithReference {
   collectionId: string;
   hadithNumber: number | string;
   endHadithNumber?: number | string;
+  /** Muslim's provider-local sequence rather than the canonical Sunnah-style reference. */
+  referenceSystem?: 'canonical' | 'provider';
 }
 
 export interface Ayah {

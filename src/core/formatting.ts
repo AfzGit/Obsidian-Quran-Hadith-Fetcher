@@ -24,6 +24,7 @@ export interface FormattingConfig {
   quranAyahClose: string;
   quranAyahStyle?: 'curly'|'square'|'round'|'angle'|'heavyAngle'|'ceiling'|'floor'|'heavyAngleAlt'|'lenticular'|'custom';
   codeSyntaxMode: 'replace'|'remove'|'none';
+  traditionalHadithTerms: boolean;
 }
 
 export interface FormatOptions {
@@ -53,6 +54,7 @@ export const DEFAULT_FORMATTING: FormattingConfig = {
   quranAyahClose: '}',
   quranAyahStyle: 'curly',
   codeSyntaxMode: 'replace',
+  traditionalHadithTerms: true,
 };
 
 function wrapLine(text: string, prefix: string, suffix: string): string { return `${prefix}${text}${suffix}`; }
@@ -63,7 +65,10 @@ function prefixCallout(cfg: FormattingConfig): string {
 }
 function contentLinePrefix(cfg: FormattingConfig): string { return prefixCallout(cfg) ? cfg.linePrefix : ''; }
 function separatorLine(cfg: FormattingConfig): string { return prefixCallout(cfg) ? '>' : ''; }
-function gradeDisplay(grade: HadithResult['grades'][number]): string { return `${grade.text}${grade.author ? ` (${formatScholarName(grade.author)})` : ''}`; }
+function gradeDisplay(grade: HadithResult['grades'][number], traditionalTerms:boolean): string {
+  const text=traditionalTerms ? grade.text.replace(/^Sound\b/iu,'Sahih').replace(/^Good\b/iu,'Hasan') : grade.text;
+  return `${text}${grade.author ? ` (${formatScholarName(grade.author)})` : ''}`;
+}
 const ARABIC_DIGITS = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'] as const;
 
 function formatAyahDigits(number: number, arabic: boolean): string {
@@ -243,10 +248,10 @@ export function formatHadith(result: HadithResult, cfg: FormattingConfig, option
   if (options.grading) {
     if (lines.length) lines.push(separator);
     if (!result.grades.length) pushWrapped('Grading: Not found');
-    else if (result.grades.length === 1) pushWrapped(`Grading: ${gradeDisplay(result.grades[0]!)}`);
+    else if (result.grades.length === 1) pushWrapped(`Grading: ${gradeDisplay(result.grades[0]!,cfg.traditionalHadithTerms)}`);
     else {
       pushWrapped('- Grading:');
-      for (const grade of result.grades) lines.push(`${linePrefix}  - ${gradeDisplay(grade)}${cfg.lineSuffix}`);
+      for (const grade of result.grades) lines.push(`${linePrefix}  - ${gradeDisplay(grade,cfg.traditionalHadithTerms)}${cfg.lineSuffix}`);
     }
   }
   return `${cfg.entirePrefix}${prefixCallout(cfg)}${link}${lines.length ? `\n${lines.join('\n')}\n` : '\n'}${cfg.entireSuffix}`.trimEnd();

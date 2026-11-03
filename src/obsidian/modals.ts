@@ -34,24 +34,29 @@ function decodeHtmlEntities(value:string):string {
 export class InputModal extends Modal {
   private input!: HTMLInputElement;
   private errorEl!: HTMLElement;
-  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string)=>void|Promise<void>, private readonly onCancel:()=>void, private readonly validateInput?:(value:string)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric', private readonly inputType:HTMLInputElement['type']='text'){ super(app); }
+  private useProviderReference=false;
+  constructor(app:App, private readonly title:string, private readonly placeholder:string, private readonly initial:string, private readonly onSubmit:(value:string,useProviderReference?:boolean)=>void|Promise<void>, private readonly onCancel:()=>void, private readonly validateInput?:(value:string,useProviderReference?:boolean)=>string|null, private readonly inputMode:HTMLInputElement['inputMode']='numeric', private readonly inputType:HTMLInputElement['type']='text', private readonly options?:{allowProviderReference?:boolean;warning?:string}){ super(app); }
   override onOpen():void {
     this.contentEl.empty();
     this.titleEl.setText(this.title);
-    new Setting(this.contentEl).setName('Reference').addText(t=>{this.input=t.inputEl;t.setPlaceholder(this.placeholder).setValue(this.initial);this.input.type=this.inputType;this.input.inputMode=this.inputMode;this.input.autocomplete='off';this.input.spellcheck=false;});
+    if(this.options?.warning) this.contentEl.createDiv({text:this.options.warning,cls:'qhf-input-warning mod-warning',attr:{role:'alert'}});
+    if(this.options?.allowProviderReference) new Setting(this.contentEl).setName('Use in-book reference').setDesc('Use this provider\'s internal Sahih Muslim numbering instead of the canonical reference system.').addToggle(t=>t.setValue(false).onChange(v=>{this.useProviderReference=v;}));
+    const referenceSetting=new Setting(this.contentEl).setName('Reference');
+    referenceSetting.settingEl.addClass('qhf-reference-input-setting');
+    referenceSetting.addText(t=>{this.input=t.inputEl;t.setPlaceholder(this.placeholder).setValue(this.initial);this.input.type=this.inputType;this.input.inputMode=this.inputMode;this.input.autocomplete='off';this.input.spellcheck=false;});
     this.errorEl=this.contentEl.createDiv({cls:'qhf-input-error'});
     const row=this.contentEl.createDiv({cls:'qhf-modal-actions'});
     row.createEl('button',{text:'Cancel'}).onclick=()=>{this.close();this.onCancel();};
     const submit=row.createEl('button',{text:'Continue',cls:'mod-cta'});
     const submitValue=()=>{
       const value=this.input.value.trim();
-      const error=this.validateInput?.(value) ?? null;
+      const error=this.validateInput?.(value,this.useProviderReference) ?? null;
       if(error){this.errorEl.setText(error);this.input.addClass('qhf-invalid');this.input.setAttribute('aria-invalid','true');this.input.focus();return;}
       this.input.removeClass('qhf-invalid');
       this.input.removeAttribute('aria-invalid');
       this.errorEl.empty();
       this.close();
-      void this.onSubmit(value);
+      void this.onSubmit(value,this.useProviderReference);
     };
     submit.onclick=submitValue;
     this.input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();submitValue();}if(e.key==='Escape'){this.close();this.onCancel();}});
@@ -132,7 +137,7 @@ export class OptionsModal extends Modal {
   constructor(
     app:App,
     private readonly initial:OutputOptions,
-    private readonly capabilities:{arabic:boolean;english:boolean;grading:boolean;quran?:boolean;isnad?:boolean},
+    private readonly capabilities:{arabic:boolean;english:boolean;grading:boolean;quran?:boolean;isnad?:boolean;traditionalHadithTerms?:boolean},
     private readonly onSubmit:(options:OutputOptions)=>void|Promise<void>,
     private readonly onCancel:()=>void,
   ){super(app);}
@@ -168,7 +173,7 @@ export class OptionsModal extends Modal {
           .onChange(v=>{opts.quranRangeMode=v as OutputOptions['quranRangeMode'];}));
     }
 
-    if(this.capabilities.isnad) make('hadithSeparateIsnad','Chain of Narration (Isnaad)',true);
+    if(this.capabilities.isnad) make('hadithSeparateIsnad',this.capabilities.traditionalHadithTerms === false ? 'Chain of Narration' : 'Isnaad',true);
 
     const row=this.contentEl.createDiv({cls:'qhf-modal-actions'});
     const cancel=row.createEl('button',{text:'Cancel'});

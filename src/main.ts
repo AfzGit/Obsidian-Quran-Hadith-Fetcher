@@ -434,18 +434,22 @@ export default class QuranHadithFetcherPlugin extends Plugin {
     }
     new CollectionModal(this.app, collections, collection => {
       const isMuslim = collection.id.toLowerCase() === 'muslim';
+      const supportsProviderReferences=isMuslim && ['hadith-api','hadith-json'].includes(provider.metadata.id);
+      const warning=provider.metadata.id==='hadith-json' && collection.id.toLowerCase()==='ibnmajah'
+        ? 'Hadith JSON has corrupted Ibn Majah numbering. Use hadith-api or Hadith Unlocked for Ibn Majah references.'
+        : undefined;
       const placeholder = isMuslim ? 'e.g. 202, 204a or 202-205,204' : 'e.g. 1, 5, 10-15';
-      new InputModal(this.app, `${collection.name} — Hadith`, placeholder, '', async value => {
-        const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
-        const refs=parseHadithReferences(`${collection.id}:${normalized}`);
-        if(!refs)return;
-        await this.chooseHadithOptions(editor, refs, operation.id, operation.signal, collections);
-      }, () => this.operations.cancel(), value => {
-        const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
-        const refs=parseHadithReferences(`${collection.id}:${normalized}`);
-        if(!refs) return 'Enter numbers, ranges, or comma-separated references (e.g. 1-5,10).';
-        return refs.map(ref=>validateHadithReference(ref,collections)).find((value): value is string => value !== null) ?? null;
-      }, 'text').open();
+      new InputModal(this.app, `${collection.name} — Hadith`, placeholder, '', async (value,useProviderReference) => {
+          const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
+          const refs=parseHadithReferences(`${collection.id}:${normalized}`)?.map(ref=>useProviderReference ? {...ref,referenceSystem:'provider' as const} : ref);
+          if(!refs)return;
+          await this.chooseHadithOptions(editor, refs, operation.id, operation.signal, collections);
+        }, () => this.operations.cancel(), (value,useProviderReference) => {
+          const normalized=value.replace(/\s*[-–—]\s*/u,'-').trim().toLowerCase();
+          const refs=parseHadithReferences(`${collection.id}:${normalized}`)?.map(ref=>useProviderReference ? {...ref,referenceSystem:'provider' as const} : ref);
+          if(!refs) return 'Enter numbers, ranges, or comma-separated references (e.g. 1-5,10).';
+          return refs.map(ref=>validateHadithReference(ref,collections)).find((value): value is string => value !== null) ?? null;
+        }, 'text','text',{allowProviderReference:supportsProviderReferences,warning}).open();
     }, offlineCollectionIds).open();
   }
 
@@ -482,7 +486,8 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         // Bukhari and Muslim receive a default Sahih grade when the provider omits one.
         // Keep that fallback user-controlled even for providers without grade metadata.
         grading:provider.capabilities.grading || refs.some(ref=>['bukhari','muslim'].includes(ref.collectionId.toLowerCase())),
-        isnad:provider.metadata.id === 'hadith-unlocked',
+        isnad:provider.metadata.id === 'hadith-unlocked' || provider.metadata.id === 'hadith-api',
+        traditionalHadithTerms:this.pluginSettings.formatting.traditionalHadithTerms,
       },
       async options => { await this.saveLastOptions('hadith', options); await this.fetchAndInsertHadith(editor, refs, id, signal, options, collections); },
       () => this.operations.cancel(),
@@ -506,7 +511,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         if (item.englishIsnad) item.englishIsnad=normalizeEnglish(item.englishIsnad);
         if (item.english) item.english=normalizeEnglish(item.english);
         item.grades=item.grades.map(g=>({...g,text:normalizeEnglish(g.text)}));
-        if ((provider.metadata.id === 'hadith-api' || provider.metadata.id === 'hadith-json') && this.pluginSettings.hadithLinkDestination !== 'provider') {
+        if ((provider.metadata.id === 'hadith-api' || provider.metadata.id === 'hadith-json') && this.pluginSettings.hadithLinkDestination !== 'provider' && !(item.reference.collectionId.toLowerCase()==='muslim' && item.reference.referenceSystem==='provider')) {
           const link=buildHadithSourceUrl(this.pluginSettings.hadithLinkDestination,item.reference.collectionId,item.reference.hadithNumber);
           if(link) item.source.sourceUrl=link;
         }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.13
+
+- Added clearer missing-Hadith errors, including Sahih Muslim reference-system guidance.
+- Added the Sahih Muslim in-book reference toggle for hadith-api and Hadith JSON, preserving provider links for in-book references.
+- Added a Hadith JSON Ibn Majah numbering warning and default-on traditional Hadith terminology.
+- Improved Hadith API English narrator line splitting and reference-modal layout.
+
 ## 1.0.12
 
 - Fixed Hadith API narrator labels that are immediately followed by text, preserving them as a separate quoted line.

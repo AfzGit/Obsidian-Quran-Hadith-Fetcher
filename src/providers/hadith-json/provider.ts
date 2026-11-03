@@ -152,7 +152,7 @@ export class HadithJsonProvider implements HadithProvider{
   private async resolveMuslimReference(reference:HadithReference,data:unknown,ctx:FetchContext):Promise<HadithReference['hadithNumber']>{
     // Hadith JSON's Muslim IDs are its in-book sequence, not the canonical
     // sunnah.com-style number. This is true for bare references (203) too.
-    if(reference.collectionId!=='muslim') return reference.hadithNumber;
+    if(reference.collectionId!=='muslim' || reference.referenceSystem==='provider') return reference.hadithNumber;
     if(!this.muslimCanonicalIndex) this.muslimCanonicalIndex=this.loadMuslimCanonicalIndex(ctx);
     const canonical=String(reference.hadithNumber).toLowerCase();
     const providerId=(await this.muslimCanonicalIndex).get(canonical);

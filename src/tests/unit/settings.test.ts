@@ -57,6 +57,7 @@ test('defaults are stable',()=>{
   assert.equal(DEFAULT_SETTINGS.formatting.quranAyahClose,'}');
   assert.equal(DEFAULT_SETTINGS.formatting.quranAyahStyle,'curly');
   assert.equal(DEFAULT_SETTINGS.formatting.codeSyntaxMode,'replace');
+  assert.equal(DEFAULT_SETTINGS.formatting.traditionalHadithTerms,true);
 });
 
 test('migration keeps legacy output preferences in separate last-used options',()=>{

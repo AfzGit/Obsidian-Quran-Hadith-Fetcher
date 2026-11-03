@@ -6,12 +6,28 @@ function missing(error: unknown): boolean {
   return error instanceof AppError && (error.kind === 'parse' || (error.kind === 'http' && error.status === 404));
 }
 
+function notFoundMessage(reference: HadithReference): string {
+  const label=`${reference.collectionId} ${reference.hadithNumber}`;
+  if(reference.collectionId.toLowerCase() === 'muslim') {
+    return `Hadith ${label} was not found. Check the reference system: use canonical references such as 204a, or enable Use in-book reference only for a provider's internal number.`;
+  }
+  return `Hadith ${label} was not found. Check the selected collection, provider, and reference number.`;
+}
+
+async function fetchOne(provider: HadithProvider, reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult> {
+  try { return await provider.fetchHadith(reference, translation, ctx); }
+  catch(error) {
+    if(missing(error)) throw new AppError(notFoundMessage(reference),'parse',error instanceof AppError ? error.status : undefined,{cause:error});
+    throw error;
+  }
+}
+
 function numbers(reference: HadithReference): HadithReference[] {
   const end = reference.endHadithNumber ?? reference.hadithNumber;
   if (typeof reference.hadithNumber !== 'number' || typeof end !== 'number') return [{...reference, endHadithNumber: undefined}];
   const start = reference.hadithNumber;
   return Array.from({length:end - start + 1}, (_, offset) =>
-    ({kind:'hadith', collectionId:reference.collectionId, hadithNumber:start + offset})
+    ({kind:'hadith', collectionId:reference.collectionId, hadithNumber:start + offset, ...(reference.referenceSystem ? {referenceSystem:reference.referenceSystem} : {})})
   );
 }
 
@@ -30,7 +46,7 @@ export async function fetchHadithReferences(
   for (const reference of expanded) {
     const isMuslim = reference.collectionId.toLowerCase() === 'muslim';
     const explicit = typeof reference.hadithNumber === 'string' && /[a-z]$/iu.test(reference.hadithNumber);
-    if (!isMuslim || explicit) { results.push(await provider.fetchHadith(reference, translation, ctx)); continue; }
+    if (!isMuslim || explicit || reference.referenceSystem === 'provider') { results.push(await fetchOne(provider, reference, translation, ctx)); continue; }
     const base = String(reference.hadithNumber);
     const lettered: HadithResult[] = [];
     const seenContent = new Set<string>();
@@ -50,7 +66,7 @@ export async function fetchHadithReferences(
     if (lettered.length) { results.push(...lettered); }
     else {
       try { results.push(await provider.fetchHadith(reference, translation, ctx)); }
-      catch (error) { if (missing(error)) throw new AppError(`Hadith ${base} was not found in Sahih Muslim.`, 'parse'); throw error; }
+      catch (error) { if (missing(error)) throw new AppError(notFoundMessage(reference), 'parse', error instanceof AppError ? error.status : undefined, {cause:error}); throw error; }
     }
     if (results.length > maximum) throw new AppError(`Hadith fetch limit is ${maximum} hadiths.`, 'validation');
   }

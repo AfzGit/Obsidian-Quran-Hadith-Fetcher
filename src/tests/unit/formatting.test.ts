@@ -106,6 +106,16 @@ test('Hadith formatter keeps an English narrator label and matn on quoted lines'
   assert.doesNotMatch(out,/Narrated Abu Musa:A man came/u);
 });
 
+test('Hadith formatter uses traditional grade terminology by default and can disable it',()=>{
+  const result:HadithResult={kind:'hadith',reference:{kind:'hadith',collectionId:'tirmidhi',hadithNumber:1},collectionName:'Tirmidhi',english:'EN',grades:[{id:'sound',text:'Sound'},{id:'good',text:'Good'}],source:{providerId:'hadith-api',providerName:'hadith-api',sourceUrl:'https://example',retrievedAt:'now'}};
+  const traditional=formatHadith(result,DEFAULT_FORMATTING,{arabic:false,english:false,grading:true});
+  const standard=formatHadith(result,{...DEFAULT_FORMATTING,traditionalHadithTerms:false},{arabic:false,english:false,grading:true});
+  assert.match(traditional,/Sahih/);
+  assert.match(traditional,/Hasan/);
+  assert.match(standard,/Sound/);
+  assert.match(standard,/Good/);
+});
+
 
 test('Hadith formatter decodes HTML entities in collection names',()=>{
   const out=formatHadith({...h,collectionName:'Ibn Rajab&#39;s Fifty'},DEFAULT_FORMATTING,{arabic:true,english:false,grading:false});

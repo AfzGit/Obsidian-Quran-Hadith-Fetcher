@@ -10,10 +10,10 @@ function isRecord(value: unknown): value is Record<string, unknown> { return typ
 
 function splitEnglishIsnad(text: string | undefined): { isnad?: string; text?: string } {
   if (!text) return {};
-  // Hadith API marks some English narrators with `Narrated …:` or `… reported:`.
-  // Some records follow the colon with a newline and others start the matn
-  // immediately, so split either form before Markdown formatting.
-  const match = /^((?:(?:narrated|reported)\b[^:\r\n]*|[^:\r\n]*\b(?:reported|narrated)):)\s*(?:\r?\n\s*)?([\s\S]+)$/iu.exec(text);
+  // Hadith API sometimes omits the space after a narrator's colon. A colon that
+  // directly precedes text (or an existing newline) is the narrator/matn boundary;
+  // requiring narrator keywords was too brittle across its English editions.
+  const match = /^([^:\r\n]*:)(?:(?:[ \t]*\r?\n[ \t]*)|(?=\S))([\s\S]+)$/u.exec(text);
   if (!match) return { text };
   return { isnad: match[1]!.trim(), text: match[2]!.trim() || undefined };
 }

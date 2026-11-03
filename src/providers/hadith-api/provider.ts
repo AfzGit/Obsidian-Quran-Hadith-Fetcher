@@ -113,7 +113,7 @@ export class HadithApiProvider implements HadithProvider {
 
   async fetchHadith(reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult> {
     if(translation.providerId!==this.metadata.id) throw new AppError('Translation belongs to a different provider.','validation');
-    const key = makeCacheKey({ provider: this.metadata.id, collection: reference.collectionId, hadith: reference.hadithNumber, translation: translation.id });
+    const key = makeCacheKey({ provider: this.metadata.id, collection: reference.collectionId, hadith: reference.hadithNumber, referenceSystem:reference.referenceSystem ?? 'canonical', translation: translation.id });
     return this.hadithLoads.run(key, async()=>this.fetchHadithCore(reference, translation, ctx, key));
   }
 
@@ -148,7 +148,7 @@ export class HadithApiProvider implements HadithProvider {
     // Fawaz's top-level Muslim numbers are an internal sequence.  Apply the
     // canonical-reference crosswalk for bare numbers as well as lettered ones:
     // e.g. canonical Muslim 203 is provider record 500, not record 203.
-    const providerNumber = reference.collectionId === 'muslim'
+    const providerNumber = reference.collectionId === 'muslim' && reference.referenceSystem !== 'provider'
       ? await this.resolveMuslimProviderNumber(String(reference.hadithNumber), ctx.signal, en?.json)
       : reference.hadithNumber;
     const arabicEdition = collection.arabicEdition;
@@ -222,7 +222,7 @@ export class HadithApiProvider implements HadithProvider {
     const concurrency = 4;
     for (let start = reference.hadithNumber; start <= end; start += concurrency) {
       const batch = Array.from({length: Math.min(concurrency, end - start + 1)}, (_, index) => start + index);
-      const batchResults = await Promise.all(batch.map(hadithNumber => this.fetchHadith({kind:'hadith',collectionId:reference.collectionId,hadithNumber}, translation, ctx)));
+      const batchResults = await Promise.all(batch.map(hadithNumber => this.fetchHadith({kind:'hadith',collectionId:reference.collectionId,hadithNumber, ...(reference.referenceSystem ? {referenceSystem:reference.referenceSystem} : {})}, translation, ctx)));
       results.push(...batchResults);
     }
     return results;
