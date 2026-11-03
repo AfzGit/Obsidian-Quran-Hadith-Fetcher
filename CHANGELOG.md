@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.14
+
+- Clarified missing-Hadith errors when the selected provider may not carry the requested narration.
+
 ## 1.0.13
 
 - Added clearer missing-Hadith errors, including Sahih Muslim reference-system guidance.

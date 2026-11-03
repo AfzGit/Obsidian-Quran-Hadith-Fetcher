@@ -27,7 +27,11 @@ jobs:
             release/main.js
             release/manifest.json
             release/styles.css
+      - name: Extract release notes from changelog
+        run: |
+          awk -v heading="## $GITHUB_REF_NAME" '$0 == heading { capture=1; next } capture && /^## / { exit } capture { print }' CHANGELOG.md > release-notes.md
+          test -s release-notes.md
       - name: Publish GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/main.js release/manifest.json release/styles.css --title "Release $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" release/main.js release/manifest.json release/styles.css --title "Release $GITHUB_REF_NAME" --notes-file release-notes.md

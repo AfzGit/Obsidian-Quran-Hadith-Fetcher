@@ -9,9 +9,9 @@ function missing(error: unknown): boolean {
 function notFoundMessage(reference: HadithReference): string {
   const label=`${reference.collectionId} ${reference.hadithNumber}`;
   if(reference.collectionId.toLowerCase() === 'muslim') {
-    return `Hadith ${label} was not found. Check the reference system: use canonical references such as 204a, or enable Use in-book reference only for a provider's internal number.`;
+    return `Hadith ${label} was not found. The selected Hadith provider may not have this Hadith. Check the reference system: use canonical references such as 204a, or enable Use in-book reference only for a provider's internal number.`;
   }
-  return `Hadith ${label} was not found. Check the selected collection, provider, and reference number.`;
+  return `Hadith ${label} was not found. The selected Hadith provider may not have this Hadith. Check the selected collection, provider, and reference number.`;
 }
 
 async function fetchOne(provider: HadithProvider, reference: HadithReference, translation: TranslationDefinition, ctx: FetchContext): Promise<HadithResult> {
