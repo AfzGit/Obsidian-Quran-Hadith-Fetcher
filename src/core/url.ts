@@ -34,13 +34,14 @@ const HADITH_SLUGS: Readonly<Record<string, string>> = { abudawud:'abudawud', ib
 
 /**
  * hadith-api and Hadith JSON use a different internal sequence for Sahih Muslim.
- * Its canonical number-letter references (for example, 204a) need a public site
- * URL even when ordinary Hadith links are configured to retain provider URLs.
+ * Canonical references need a public site URL even when ordinary Hadith links are
+ * configured to retain provider URLs. Explicit in-book references retain the
+ * provider URL unless the user has selected another destination.
  */
-export function hadithLinkDestinationForReference(configured:HadithLinkDestination, providerId:string, collectionId:string, reference:string|number):Exclude<HadithLinkDestination,'provider'>|undefined {
+export function hadithLinkDestinationForReference(configured:HadithLinkDestination, providerId:string, collectionId:string, isInBookReference:boolean):Exclude<HadithLinkDestination,'provider'>|undefined {
   if (providerId !== 'hadith-api' && providerId !== 'hadith-json') return undefined;
   if (configured !== 'provider') return configured;
-  return collectionId.toLowerCase() === 'muslim' && /^\d+[a-z]$/iu.test(String(reference).trim()) ? 'sunnah' : undefined;
+  return collectionId.toLowerCase() === 'muslim' && !isInBookReference ? 'sunnah' : undefined;
 }
 
 export function buildHadithSourceUrl(destination: HadithLinkDestination, collectionId: string, canonicalReference: string|number): string | undefined {

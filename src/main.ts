@@ -511,7 +511,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         if (item.englishIsnad) item.englishIsnad=normalizeEnglish(item.englishIsnad);
         if (item.english) item.english=normalizeEnglish(item.english);
         item.grades=item.grades.map(g=>({...g,text:normalizeEnglish(g.text)}));
-        const destination=hadithLinkDestinationForReference(this.pluginSettings.hadithLinkDestination,provider.metadata.id,item.reference.collectionId,item.reference.hadithNumber);
+        const destination=hadithLinkDestinationForReference(this.pluginSettings.hadithLinkDestination,provider.metadata.id,item.reference.collectionId,item.reference.referenceSystem === 'provider');
         if (destination) {
           const link=buildHadithSourceUrl(destination,item.reference.collectionId,item.reference.hadithNumber);
           if(link) item.source.sourceUrl=link;

@@ -25,10 +25,10 @@ test('Hadith destination URLs use canonical references',()=>{
   assert.equal(buildHadithSourceUrl('hadithhub','bukhari',202),'https://hadithhub.com/bukhari:202');
 });
 
-test('Sahih Muslim number-letter references default to Sunnah.com for API-backed providers',()=>{
-  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim','204a'),'sunnah');
-  assert.equal(hadithLinkDestinationForReference('provider','hadith-json','muslim','204A'),'sunnah');
-  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim',204),undefined);
-  assert.equal(hadithLinkDestinationForReference('hadithhub','hadith-api','muslim','204a'),'hadithhub');
+test('canonical Sahih Muslim references default to Sunnah.com for API-backed providers',()=>{
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim',false),'sunnah');
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-json','muslim',false),'sunnah');
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim',true),undefined);
+  assert.equal(hadithLinkDestinationForReference('hadithhub','hadith-api','muslim',false),'hadithhub');
 });
 
