@@ -59,7 +59,7 @@ Run these commands in the command palette (`Ctrl-p`)
 ## Command: Fetch Ahadith
 
 - **Select a Hadith Book**: Choose from a list of Ahadith books (according to the provider set in settings). The list uses stable two-digit prefixes—such as `01` Bukhari and `02` Muslim—so a collection keeps the same position across providers that offer it.
-- **Enter references**: Use a number (`202`), range (`202-205`), or a comma-separated combination (`202-205,300`). For Sahih Muslim, `204a` selects exactly that narration while a bare `204` expands consecutive lettered narrations when the selected provider exposes them. hadith-api and Hadith JSON can also use their internal Muslim numbering through **Use in-book reference** in the reference modal; those entries retain their provider link rather than a destination-site link.
+- **Enter references**: Use a number (`202`), range (`202-205`), or a comma-separated combination (`202-205,300`). For Sahih Muslim, `204a` selects exactly that narration while a bare `204` expands consecutive lettered narrations when the selected provider exposes them. With hadith-api or Hadith JSON, canonical number-letter Muslim references use Sunnah.com by default, or Hadith Hub when it is selected as the Hadith link destination. Those providers can also use their internal Muslim numbering through **Use in-book reference** in the reference modal.
 - **Fetch Specific Ayat**: Input a single or multiple Ahadith (e.g., `5` or `5-10`)
 - **Customize Content**: Toggle Arabic text, English translation, embedded links, and Grading.
 

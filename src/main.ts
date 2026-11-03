@@ -4,7 +4,7 @@ import { OperationManager } from './core/operation';
 import { errorToNotice, AppError } from './core/errors';
 import { DEFAULT_FORMATTING, formatHadith, formatHadithRange, formatQuran } from './core/formatting';
 import { normalizeBlessing, normalizeStandaloneRa, transformFetchedEnglishText, transformFetchedArabicText } from './core/normalization';
-import { buildHadithSourceUrl, makeQuranUrl, validateTemplate } from './core/url';
+import { buildHadithSourceUrl, hadithLinkDestinationForReference, makeQuranUrl, validateTemplate } from './core/url';
 import { fetchHadithReferences } from './core/hadith-references';
 import { parseHadithReferences, parseQuranReference } from './parsing/references';
 import { validateHadithReference, validateQuranReference } from './parsing/validation';
@@ -511,8 +511,9 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         if (item.englishIsnad) item.englishIsnad=normalizeEnglish(item.englishIsnad);
         if (item.english) item.english=normalizeEnglish(item.english);
         item.grades=item.grades.map(g=>({...g,text:normalizeEnglish(g.text)}));
-        if ((provider.metadata.id === 'hadith-api' || provider.metadata.id === 'hadith-json') && this.pluginSettings.hadithLinkDestination !== 'provider' && !(item.reference.collectionId.toLowerCase()==='muslim' && item.reference.referenceSystem==='provider')) {
-          const link=buildHadithSourceUrl(this.pluginSettings.hadithLinkDestination,item.reference.collectionId,item.reference.hadithNumber);
+        const destination=hadithLinkDestinationForReference(this.pluginSettings.hadithLinkDestination,provider.metadata.id,item.reference.collectionId,item.reference.hadithNumber);
+        if (destination) {
+          const link=buildHadithSourceUrl(destination,item.reference.collectionId,item.reference.hadithNumber);
           if(link) item.source.sourceUrl=link;
         }
         return item;

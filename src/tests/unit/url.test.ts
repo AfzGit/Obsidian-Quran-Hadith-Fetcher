@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildHadithSourceUrl, makeQuranUrl } from '../../core/url';
+import { buildHadithSourceUrl, hadithLinkDestinationForReference, makeQuranUrl } from '../../core/url';
 
 
 test('Quran Unlocked source URL can use a selected translation',()=>{
@@ -23,5 +23,12 @@ test('Quran Unlocked range URL matches the public site route exactly',()=>{
 test('Hadith destination URLs use canonical references',()=>{
   assert.equal(buildHadithSourceUrl('sunnah','muslim','204a'),'https://sunnah.com/muslim:204a');
   assert.equal(buildHadithSourceUrl('hadithhub','bukhari',202),'https://hadithhub.com/bukhari:202');
+});
+
+test('Sahih Muslim number-letter references default to Sunnah.com for API-backed providers',()=>{
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim','204a'),'sunnah');
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-json','muslim','204A'),'sunnah');
+  assert.equal(hadithLinkDestinationForReference('provider','hadith-api','muslim',204),undefined);
+  assert.equal(hadithLinkDestinationForReference('hadithhub','hadith-api','muslim','204a'),'hadithhub');
 });
 

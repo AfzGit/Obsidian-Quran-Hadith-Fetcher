@@ -141,7 +141,7 @@ export function migrateSettings(raw:unknown):Settings {
     : { ...knownDefaults, ...normalizedCommandVisibility };
   return {
     ...structuredClone(DEFAULT_SETTINGS), ...source, schemaVersion:15, quranProvider:legacyProviderDefaults && source.quranProvider==='quran-unlocked' ? 'alquran-cloud' : (typeof source.quranProvider==='string' && source.quranProvider.trim() ? source.quranProvider : DEFAULT_SETTINGS.quranProvider),
-    hadithLinkDestination:source.hadithLinkDestination === 'sunnah' || source.hadithLinkDestination === 'hadithhub' ? source.hadithLinkDestination : 'provider',
+    hadithLinkDestination:source.hadithLinkDestination === 'provider' || source.hadithLinkDestination === 'sunnah' || source.hadithLinkDestination === 'hadithhub' ? source.hadithLinkDestination : DEFAULT_SETTINGS.hadithLinkDestination,
     replacementRules:mergeReplacementRules(source.replacementRules, _legacyRabbConversion),
     formatting:normalizeFormatting({...DEFAULT_FORMATTING,...source.formatting}),
     quranLanguage:typeof source.quranLanguage==='string'&&source.quranLanguage.trim()?source.quranLanguage:'en',

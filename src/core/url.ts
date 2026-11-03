@@ -31,6 +31,18 @@ export { QURAN_WEBSITES };
 
 export type HadithLinkDestination = 'provider'|'sunnah'|'hadithhub';
 const HADITH_SLUGS: Readonly<Record<string, string>> = { abudawud:'abudawud', ibnmajah:'ibnmajah', nasai:'nasai', tirmidhi:'tirmidhi', bukhari:'bukhari', muslim:'muslim', malik:'malik' };
+
+/**
+ * hadith-api and Hadith JSON use a different internal sequence for Sahih Muslim.
+ * Its canonical number-letter references (for example, 204a) need a public site
+ * URL even when ordinary Hadith links are configured to retain provider URLs.
+ */
+export function hadithLinkDestinationForReference(configured:HadithLinkDestination, providerId:string, collectionId:string, reference:string|number):Exclude<HadithLinkDestination,'provider'>|undefined {
+  if (providerId !== 'hadith-api' && providerId !== 'hadith-json') return undefined;
+  if (configured !== 'provider') return configured;
+  return collectionId.toLowerCase() === 'muslim' && /^\d+[a-z]$/iu.test(String(reference).trim()) ? 'sunnah' : undefined;
+}
+
 export function buildHadithSourceUrl(destination: HadithLinkDestination, collectionId: string, canonicalReference: string|number): string | undefined {
   if (destination === 'provider') return undefined;
   const slug = HADITH_SLUGS[collectionId.toLowerCase()];

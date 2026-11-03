@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.15
+
+- Fixed canonical Sahih Muslim number-letter references from hadith-api and Hadith JSON to use Sunnah.com by default, or the configured Hadith Hub link, rather than an unresolved provider link.
+
 ## 1.0.14
 
 - Clarified missing-Hadith errors when the selected provider may not carry the requested narration.
