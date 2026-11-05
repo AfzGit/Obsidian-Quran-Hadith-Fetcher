@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.17
+
+- Added a Mushaf-like merged Quran range format that places each Ayah number after its Ayah text.
+- Applied the standard English text conversion settings to Hadith grading text and scholar names.
+
 ## 1.0.16
 
 - Fixed canonical Sahih Muslim references from hadith-api and Hadith JSON to use Sunnah.com by default when provider links are selected; explicit in-book references retain their provider URL.
