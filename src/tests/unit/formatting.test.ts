@@ -60,6 +60,13 @@ test('Quran ranged output supports merged ayahs with verse markers',()=>{
   assert.match(out,/> \{⟪٢٥٥⟫ AR1 ⟪٢٥٦⟫ AR2 ⟪٢٥٧⟫ AR3\}\n>\n> \{⟪255⟫ EN1 ⟪256⟫ EN2 ⟪257⟫ EN3\}/);
 });
 
+test('Quran ranged output supports Mushaf-like merged ayahs with numbers after the text',()=>{
+  const out=formatQuran(q,DEFAULT_FORMATTING,{arabic:true,english:true,grading:false,quranRangeMode:'merged-mushaf'});
+  assert.match(out,/> \{AR1 ⟪٢٥٥⟫ AR2 ⟪٢٥٦⟫ AR3 ⟪٢٥٧⟫\}\n>\n> \{EN1 ⟪255⟫ EN2 ⟪256⟫ EN3 ⟪257⟫\}/);
+  const onlyArabic=formatQuran(q,{...DEFAULT_FORMATTING,arabicAyahNumbers:false},{arabic:true,english:false,grading:false,quranRangeMode:'merged-mushaf'});
+  assert.match(onlyArabic,/> \{AR1 ⟪255⟫ AR2 ⟪256⟫ AR3 ⟪257⟫\}/);
+});
+
 
 
 test('Quran numbering uses Arabic digits by default and can be disabled',()=>{

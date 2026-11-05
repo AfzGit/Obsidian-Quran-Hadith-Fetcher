@@ -83,7 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
 function normalizeOptions(raw:unknown, defaults:OutputOptions):OutputOptions {
   const source=raw && typeof raw==='object' ? raw as (Partial<OutputOptions> & {quranMergeAyahs?:boolean}) : {};
   return { ...defaults, ...source,
-    quranRangeMode:(['line-by-line','merged','alternate','numbered'] as const).includes(source.quranRangeMode as QuranRangeMode)
+    quranRangeMode:(['line-by-line','merged','merged-mushaf','alternate','numbered'] as const).includes(source.quranRangeMode as QuranRangeMode)
       ? source.quranRangeMode as QuranRangeMode
       : source.quranMergeAyahs === true ? 'merged' : defaults.quranRangeMode,
     quranFootnotes:source.quranFootnotes === true,

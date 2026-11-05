@@ -94,7 +94,7 @@ export interface HadithResult {
   source: SourceMetadata;
 }
 
-export type QuranRangeMode = 'line-by-line' | 'merged' | 'alternate' | 'numbered';
+export type QuranRangeMode = 'line-by-line' | 'merged' | 'merged-mushaf' | 'alternate' | 'numbered';
 
 export interface OutputOptions {
   arabic: boolean;

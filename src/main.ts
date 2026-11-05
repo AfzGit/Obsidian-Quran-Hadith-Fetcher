@@ -3,7 +3,7 @@ import { ObsidianHttpClient } from './core/http';
 import { OperationManager } from './core/operation';
 import { errorToNotice, AppError } from './core/errors';
 import { DEFAULT_FORMATTING, formatHadith, formatHadithRange, formatQuran } from './core/formatting';
-import { normalizeBlessing, normalizeStandaloneRa, transformFetchedEnglishText, transformFetchedArabicText } from './core/normalization';
+import { normalizeBlessing, normalizeStandaloneRa, transformFetchedEnglishText, transformFetchedArabicText, transformFetchedHadithGrades } from './core/normalization';
 import { buildHadithSourceUrl, hadithLinkDestinationForReference, makeQuranUrl, validateTemplate } from './core/url';
 import { fetchHadithReferences } from './core/hadith-references';
 import { parseHadithReferences, parseQuranReference } from './parsing/references';
@@ -49,7 +49,8 @@ function createNormalizers(pluginSettings: Settings) {
   } as const;
   const normalizeEnglish = (text: string) => transformFetchedEnglishText(text, options);
   const normalizeArabic = (text: string) => transformFetchedArabicText(text, options);
-  return { normalizeEnglish, normalizeArabic };
+  const normalizeGrades = <T extends {text:string; author?:string}>(grades:readonly T[]) => transformFetchedHadithGrades(grades, options);
+  return { normalizeEnglish, normalizeArabic, normalizeGrades };
 }
 
 export default class QuranHadithFetcherPlugin extends Plugin {
@@ -502,7 +503,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
       if(!translation) throw new AppError('No Hadith translation is configured for this provider.','validation');
       const results = await fetchHadithReferences(provider, refs, translation, {signal}, this.pluginSettings.hadithFetchLimit);
       if (!this.operations.isCurrent(id)) return;
-      const { normalizeArabic, normalizeEnglish } = createNormalizers(this.pluginSettings);
+      const { normalizeArabic, normalizeEnglish, normalizeGrades } = createNormalizers(this.pluginSettings);
       const transformed:HadithResult[]=results.map(result=>{
         const gradedResult=applyDefaultHadithGrading(result);
         const item:HadithResult=structuredClone(gradedResult);
@@ -510,7 +511,7 @@ export default class QuranHadithFetcherPlugin extends Plugin {
         if (item.arabic) item.arabic=normalizeArabic(item.arabic);
         if (item.englishIsnad) item.englishIsnad=normalizeEnglish(item.englishIsnad);
         if (item.english) item.english=normalizeEnglish(item.english);
-        item.grades=item.grades.map(g=>({...g,text:normalizeEnglish(g.text)}));
+        item.grades=normalizeGrades(item.grades);
         const destination=hadithLinkDestinationForReference(this.pluginSettings.hadithLinkDestination,provider.metadata.id,item.reference.collectionId,item.reference.referenceSystem === 'provider');
         if (destination) {
           const link=buildHadithSourceUrl(destination,item.reference.collectionId,item.reference.hadithNumber);

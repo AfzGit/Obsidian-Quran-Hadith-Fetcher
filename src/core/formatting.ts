@@ -1,4 +1,4 @@
-import type { HadithResult, QuranResult } from '../domain/models';
+import type { HadithResult, QuranRangeMode, QuranResult } from '../domain/models';
 import { formatScholarName } from './names';
 
 export type ContentMode = 'arabic' | 'english' | 'grading';
@@ -133,7 +133,7 @@ function prepareQuranFootnotes(result: QuranResult): QuranFootnoteOutput {
   return { byAyah, footnotes };
 }
 
-function quranBlockText(result: QuranResult, cfg: FormattingConfig, options: FormatOptions & { quranRangeMode?: 'line-by-line' | 'merged' | 'alternate' | 'numbered'; quranFootnotes?: boolean; }): string[] {
+function quranBlockText(result: QuranResult, cfg: FormattingConfig, options: FormatOptions & { quranRangeMode?: QuranRangeMode; quranFootnotes?: boolean; }): string[] {
   const mode = options.quranRangeMode ?? 'line-by-line';
   const ayahs = result.ayahs;
   const arabic = ayahs.filter(a => options.arabic && a.arabic);
@@ -145,14 +145,16 @@ function quranBlockText(result: QuranResult, cfg: FormattingConfig, options: For
   const linePrefix = contentLinePrefix(cfg);
   const separator = separatorLine(cfg);
 
-  if (result.reference.startAyah !== result.reference.endAyah && mode === 'merged') {
+  if (result.reference.startAyah !== result.reference.endAyah && (mode === 'merged' || mode === 'merged-mushaf')) {
+    const mushafOrder = mode === 'merged-mushaf';
+    const mergeAyah = (text: string, number: string): string => mushafOrder ? `${text} ${number}` : `${number} ${text}`;
     if (arabic.length) {
-      const text = arabic.map(a => `${formatAyahNumber(a.reference.startAyah, cfg, cfg.arabicAyahNumbers)} ${a.arabic!}`).join(' ');
+      const text = arabic.map(a => mergeAyah(a.arabic!, formatAyahNumber(a.reference.startAyah, cfg, cfg.arabicAyahNumbers))).join(' ');
       lines.push(wrapLine(`${cfg.quranAyahOpen}${text}${cfg.quranAyahClose}`, linePrefix, cfg.lineSuffix));
     }
     if (english.length) {
       if (arabic.length) lines.push(separator);
-      const text = english.map(a => `${formatAyahNumber(a.reference.startAyah, cfg, false)} ${quranTranslationText(a, Boolean(options.quranFootnotes), footnoteOutput.byAyah.get(a.reference.startAyah))}`).join(' ');
+      const text = english.map(a => mergeAyah(quranTranslationText(a, Boolean(options.quranFootnotes), footnoteOutput.byAyah.get(a.reference.startAyah)), formatAyahNumber(a.reference.startAyah, cfg, false))).join(' ');
       lines.push(wrapLine(`${cfg.quranAyahOpen}${text}${cfg.quranAyahClose}`, linePrefix, cfg.lineSuffix));
     }
   } else if (result.reference.startAyah !== result.reference.endAyah && mode === 'alternate') {
@@ -208,7 +210,7 @@ function quranBlockText(result: QuranResult, cfg: FormattingConfig, options: For
  * keeps provider response quirks out of the output contract and means every Quran
  * source produces the same Obsidian structure for equivalent domain data.
  */
-export function formatQuran(result: QuranResult, cfg: FormattingConfig, options: FormatOptions & { quranRangeMode?: 'line-by-line' | 'merged' | 'alternate' | 'numbered'; quranFootnotes?: boolean; }): string {
+export function formatQuran(result: QuranResult, cfg: FormattingConfig, options: FormatOptions & { quranRangeMode?: QuranRangeMode; quranFootnotes?: boolean; }): string {
   const target = `${result.reference.surah}:${result.reference.startAyah}`;
   const label = result.reference.startAyah === result.reference.endAyah ? target : `${result.reference.surah}:${result.reference.startAyah}-${result.reference.endAyah}`;
   const rawSurahName = result.surahName.trim();

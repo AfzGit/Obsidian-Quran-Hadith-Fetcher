@@ -412,6 +412,29 @@ export function transformFetchedEnglishText(text: string, options: FetchedTextTr
   return modifyCodeSyntax(out, options.codeSyntaxMode);
 }
 
+export interface NormalizableHadithGrade {
+  text: string;
+  author?: string;
+}
+
+/**
+ * Apply the same English conversion settings to Hadith grading text and its
+ * attributing scholar. Grading metadata comes from providers in the same
+ * transliterated form as the rest of the English text, so it must travel through
+ * the fetched-text pipeline rather than bypassing the user's conversion settings.
+ */
+export function transformFetchedHadithGrade<T extends NormalizableHadithGrade>(grade: T, options: FetchedTextTransformOptions): T {
+  return {
+    ...grade,
+    text: transformFetchedEnglishText(grade.text, options),
+    ...(grade.author === undefined ? {} : { author: transformFetchedEnglishText(grade.author, options) }),
+  };
+}
+
+export function transformFetchedHadithGrades<T extends NormalizableHadithGrade>(grades: readonly T[], options: FetchedTextTransformOptions): T[] {
+  return grades.map(grade => transformFetchedHadithGrade(grade, options));
+}
+
 /** Canonical transformation entry point for fetched Arabic Quran text. */
 export function transformFetchedArabicText(text: string, options: Pick<FetchedTextTransformOptions, 'textConversionsEnabled' | 'blessingNormalization'>): string {
   if (!options.textConversionsEnabled || !options.blessingNormalization) return text;

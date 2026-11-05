@@ -165,7 +165,8 @@ export class OptionsModal extends Modal {
         .addDropdown(d=>d
           .addOptions({
             'line-by-line':'Line by line',
-            'merged':'Merge ayahs',
+            'merged':'Merge Ayahs',
+            'merged-mushaf':'Merge Ayahs (Mushaf-like)',
             'alternate':'Alternate Arabic / English',
             'numbered':'Line by line with numbering',
           })

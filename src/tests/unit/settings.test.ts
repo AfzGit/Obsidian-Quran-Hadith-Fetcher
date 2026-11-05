@@ -60,6 +60,11 @@ test('defaults are stable',()=>{
   assert.equal(DEFAULT_SETTINGS.formatting.traditionalHadithTerms,true);
 });
 
+test('migration preserves the Mushaf-like merged Quran range mode',()=>{
+  const migrated=migrateSettings({schemaVersion:15,lastQuranOptions:{...DEFAULT_SETTINGS.lastQuranOptions,quranRangeMode:'merged-mushaf'}});
+  assert.equal(migrated.lastQuranOptions.quranRangeMode,'merged-mushaf');
+});
+
 test('migration keeps legacy output preferences in separate last-used options',()=>{
   const migrated=migrateSettings({schemaVersion:2,arabicEnabled:false,englishEnabled:true,hadithGradingEnabled:false,linkInsertion:false});
   assert.equal(migrated.lastQuranOptions.arabic,false);

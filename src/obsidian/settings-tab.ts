@@ -585,7 +585,7 @@ export class FetcherSettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
       }));
 
-    new Setting(controls).setName('Use standard English transliteration').setDesc('Replace selected transliteration marks with simpler English spellings. Example: Ayât → Ayat.')
+    new Setting(controls).setName('Use standard English transliteration').setDesc('Replace selected transliteration marks with simpler English spellings in fetched text, including Hadith gradings. Example: Ayât → Ayat.')
       .addToggle(t=>t.setValue(this.plugin.pluginSettings.romanEnglish).onChange(async v=>{
         this.plugin.pluginSettings.romanEnglish=v;
         await this.plugin.saveSettings();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeBlessing, normalizeArabicBlessing, normalizeStandaloneRa, applyEnglishReplacements, transformFetchedEnglishText, transformFetchedArabicText, convertToRomanEnglish, modifyCodeSyntax, DEFAULT_REPLACEMENT_RULES } from '../../core/normalization';
+import { normalizeBlessing, normalizeArabicBlessing, normalizeStandaloneRa, applyEnglishReplacements, transformFetchedEnglishText, transformFetchedArabicText, transformFetchedHadithGrades, convertToRomanEnglish, modifyCodeSyntax, DEFAULT_REPLACEMENT_RULES } from '../../core/normalization';
 
 
 test('English blessing variants normalize to ﷺ',()=>{
@@ -207,4 +207,19 @@ test('canonical fetched text transformation pipeline preserves stage order and m
   );
   assert.equal(transformFetchedEnglishText('Messenger, may Allah bless him and grant him peace, said', {...options, textConversionsEnabled:false}), 'Messenger, may Allah bless him and grant him peace, said');
   assert.equal(transformFetchedArabicText('وَقَالَ رَسُولُ اللهِ صلى الله عليه وسلم', options), 'وَقَالَ رَسُولُ اللهِ ﷺ');
+});
+
+test('fetched Hadith grades apply the standard English settings to text and author', () => {
+  const options = {
+    textConversionsEnabled: true,
+    blessingNormalization: true,
+    raNormalization: false,
+    romanEnglish: true,
+    codeSyntaxMode: 'none' as const,
+    replacementRules: DEFAULT_REPLACEMENT_RULES,
+  };
+  const grades = transformFetchedHadithGrades([{id:'g',text:'Ṣaḥīḥ',author:'ʿAli Zaʾī'}], options);
+  assert.deepEqual(grades,[{id:'g',text:'Sahih',author:'Ali Zai'}]);
+  const disabled = transformFetchedHadithGrades([{id:'g',text:'Ṣaḥīḥ',author:'ʿAli Zaʾī'}], {...options, textConversionsEnabled:false});
+  assert.deepEqual(disabled,[{id:'g',text:'Ṣaḥīḥ',author:'ʿAli Zaʾī'}]);
 });
