@@ -13,6 +13,8 @@ It supports multiple languages, translations, and Ahadith books (depending on th
 
 > Disclaimer: Please double-check the Ahadith and their respective links, and do not blindly trust this plugin or the hadith providers. You are responsible for verifying the Ahadith you fetch. Although, I have tried my best to make sure that atleast the Ahadith from the six collections are properly linked and fetched, the plugin or the hadith providers may have errors. Please feel free to inform me on this project's GitHub for any issues you face regarding this plugin. 
 
+> ➕ Check out my other Obsidian plugin for Salah time tracking: [Salah and Hijri Times](https://community.obsidian.md/plugins/salah-hijri-times).
+
 ## Usage
 
 Run these commands in the command palette (`Ctrl-p`)
